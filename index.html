@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>User Notes</title>
+	<link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
+	<link href="https://stackpath.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css" rel="stylesheet" integrity="sha384-wvfXpqpZZVQGK6TAh5PVlGOfQNHSoD2xbE+QkPxCAFlNEevoEH3Sl0sibVcOQVnN" crossorigin="anonymous">
+
+	<style type="text/css">
+		.custom-table {
+			text-align: center;
+		}
+
+		.custom-table > .row {
+			border-top: 1px solid #ddd;
+			padding: 1rem 0.25rem;
+		}
+
+		.custom-table > .row.thead {
+			font-weight: bold;
+			font-size: 16px;
+		}
+
+		.custom-table .action-column {
+			vertical-align: middle;
+		}
+
+		a {
+			cursor: pointer;
+		}
+
+		.edit-action i,
+		.delete-action i {
+			transition: color 0.3s ease-in-out;
+		}
+
+		.edit-action{
+			font-size: 20px;
+		}
+
+		.delete-action {
+			font-size: 23px;
+		}
+
+		.edit-action:hover i {
+			color: #ffca00;
+			transition: color 0.2 ease-in-out;
+		}
+
+		.delete-action:hover i {
+			color: red;
+			transition: color 0.2 ease-in-out;
+		}
+	</style>
+</head>
+<body>
+	<nav class="navbar navbar-dark bg-dark">
+		<div class="sign-in-actions ml-auto">
+		    <button class="btn btn-danger" onclick="googleLogin()">Login with Google</button>
+		    <button class="btn btn-primary mx-1">Login with Facebook</button>
+		</div>
+		<!-- <div class="sign-out-actions d-none ml-auto">
+			<button class="btn btn-primary mx-1">Log Out</button>
+		</div> -->
+	</nav>
+
+	<div class="container">
+		<div class="row">
+			<div class="col-8 offset-2 my-5">
+				<h3 class="text-center">User Notes</h3>
+			</div>
+		</div>
+
+		<div class="row">
+			<div class="col-8 offset-2">
+				<div class="container-fluid custom-table">
+					<div class="row thead">
+						<div class="col-5">Label</div>
+						<div class="col-5">Notes</div>
+						<div class="col-2">Action</div>
+					</div>
+
+					<div class="row main-row ethalone d-none">
+						<div class="col-10">
+							<div class="row">
+								<div class="col-6">
+									<input type="text" class="form-control label-input" placeholder="Enter label here">
+								</div>
+								<div class="col-6">
+									<input type="text" class="form-control note-input" placeholder="Enter note here">
+								</div>
+							</div>
+						</div>
+						<div class="col-2 d-flex align-items-center justify-content-center">
+							<!-- <a onclick="handleEdit()" alt="Edit" class="mr-3"><i class="fa fa-pencil edit-action" aria-hidden="true"></i></a> -->
+							<a class="delete-action"><i class="fa fa-times" aria-hidden="true"></i></a>
+						</div>
+					</div>
+
+					<div class="row main-row">
+						<div class="col-10">
+							<div class="row">
+								<div class="col-6">
+									<input type="text" class="form-control label-input" placeholder="Enter label here">
+								</div>
+								<div class="col-6">
+									<input type="text" class="form-control note-input" placeholder="Enter note here">
+								</div>
+							</div>
+						</div>
+						<div class="col-2 d-flex align-items-center justify-content-center">
+							<!-- <a onclick="handleEdit()" alt="Edit" class="mr-3"><i class="fa fa-pencil edit-action" aria-hidden="true"></i></a> -->
+							<a class="delete-action"><i class="fa fa-times" aria-hidden="true"></i></a>
+						</div>
+					</div>
+
+					<div class="row add-row">
+						<div class="col-12 d-flex justify-content-center">
+							<button type="button" class="btn btn-dark add-action"><i class="fa fa-times-circle-o" aria-hidden="true" style="transform: rotateZ(45deg);"></i>&nbsp;Add</button>
+						</div>
+					</div>
+
+					<div class="row form-check">
+						<div class="col-12 d-flex">
+							<input class="form-check-input" type="checkbox" id="option1">
+							<label class="form-check-label" for="option1">Option 1</label>
+						</div>
+
+						<div class="col-12 d-flex">
+							<input class="form-check-input" type="checkbox" id="option2">
+							<label class="form-check-label" for="option2">Option 2</label>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+
+		<div class="row mt-3">
+			<div class="col-12 d-flex justify-content-center">
+				<button type="button" class="btn btn-success create-action"><i class="fa fa-check-circle-o" aria-hidden="true"></i>&nbsp;Create</button>
+			</div>
+		</div>
+	</div>
+
+	<!-- Insert these scripts at the bottom of the HTML, but before you use any Firebase services -->
+
+	<!-- Firebase App (the core Firebase SDK) is always required and must be listed first -->
+	<script src="https://www.gstatic.com/firebasejs/5.11.1/firebase-app.js"></script>
+
+	<!-- Add Firebase products that you want to use -->
+	<script src="https://www.gstatic.com/firebasejs/5.11.1/firebase-auth.js"></script>
+	<script src="https://www.gstatic.com/firebasejs/5.11.1/firebase-firestore.js"></script>
+
+	<script>
+	    // TODO: Replace the following with your app's Firebase project configuration
+	    const firebaseConfig = {
+			apiKey: "AIzaSyBOthBwcREmRXm2OwHDoIQqbzdERufUowE",
+			authDomain: "user-notes-d5283.firebaseapp.com",
+			databaseURL: "https://user-notes-d5283.firebaseio.com",
+			projectId: "user-notes-d5283",
+			storageBucket: "user-notes-d5283.appspot.com",
+			messagingSenderId: "688290206555",
+			appId: "1:688290206555:web:5ecc4a6ba1a7c77d"
+		};
+
+	    // Initialize Firebase
+	    firebase.initializeApp(firebaseConfig);
+	</script>
+
+	<!-- bootstrap -->
+	<script src="https://code.jquery.com/jquery-3.3.1.slim.min.js" integrity="sha384-q8i/X+965DzO0rT7abK41JStQIAqVgRVzpbzo5smXKp4YfRvH+8abtTE1Pi6jizo" crossorigin="anonymous"></script>
+	<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js" integrity="sha384-JjSmVgyd0p3pXB1rRibZUAYoIIy6OrQ6VrjIEaFf/nJGzIxFDsf4x0xIM+B07jRM" crossorigin="anonymous"></script>
+
+	<script type=text/javascript>
+		function handleAdd(e) {
+			const $ = jQuery;
+			$('.ethalone').clone(true, true)
+				.removeClass('ethalone d-none')
+				.insertBefore($('.add-row'));
+		}
+
+		function handleEdit() {
+
+		}
+
+		function handleDelete(e) {
+			$(e.target).closest('.row').remove();
+		}
+
+		function googleLogin() {
+			const provider = new firebase.auth.GoogleAuthProvider();
+
+			firebase.auth().signInWithPopup(provider).then(function(result) {
+				if (result.user) {
+					window.location.reload();
+				}
+			});
+		}
+
+		jQuery(document).ready(async function($) {
+			$('.add-action').on('click', handleAdd);
+			$('.custom-table').on('click', '.delete-action', handleDelete);
+
+			// add remove button if data is entered
+			$('.custom-table').on('keyup', 'input', function (e) {
+				var mainRow = $(e.target).closest('.main-row');
+				var inputs =  mainRow.find('input[type="text"]');
+				var deleteAction = $(mainRow.find('.delete-action').closest('a'));
+
+				var showRemove = false;
+
+				for (var input of inputs) {
+					if ($(input).val().trim() !== '') {
+						showRemove = true;
+					}
+				}
+
+				if (showRemove) {
+					deleteAction.removeClass('d-none');
+				} else {
+					deleteAction.addClass('d-none');
+				}
+			});
+
+			var db = new firebase.firestore();
+
+			var lastDocumentId = await db.collection('MasterNotes').doc('lastDocumentId').get().then(function(result) {
+				if (!result.exists) {
+					return db.collection('MasterNotes').doc('lastDocumentId').set({value: 0}).then(function() {
+					    return 0;
+					})
+					.catch(function (){
+						return null;
+					});
+				} else {
+					return result.data().value;
+				}
+			});
+
+			if (lastDocumentId !== null) { // everything is ok, move on
+				var masterNotesCollection = db.collection('MasterNotes');
+
+				$('.create-action').on('click', function() {
+					var now = new Date()
+
+					var notes = [];
+
+					var rows = $('.custom-table .main-row:not(.ethalone)');
+
+					for (var row of rows) {
+						var $row = $(row);
+
+						notes.push({
+							label: $($row.find('.label-input')).val(),
+							note: $($row.find('.note-input')).val()
+						})
+					}
+
+					var doc = {
+						name: "My notes",
+						dateCreated: now.getFullYear() + (now.getMonth() + 1 < 10 ? '0' + (now.getMonth() + 1) : (now.getMonth() + 1)) + (now.getDate() < 10 ? '0' + now.getDate() : now.getDate()),
+						totalVisits: 0,
+						notes: notes,
+						options: {
+							op1: $('#option1').is(':checked'),
+							op2: $('#option2').is(':checked'),
+						},
+						status: ""
+					};
+
+					masterNotesCollection.add(doc).then(function(result) {
+						debugger;
+						if (result.id) {
+							result.update({
+								shortId: lastDocumentId
+							});
+
+							masterNotesCollection.doc('lastDocumentId').update({
+								value: lastDocumentId + 1
+							}).then(async function(result) {
+								lastDocumentId = db.collection('MasterNotes').doc('lastDocumentId').get().then(function(result) {
+									lastDocumentId = result.data().value;
+								});
+							}).catch(function(error) {
+								console.error(error);
+							});
+						}
+					}).catch(function(error) {
+						console.error(error);
+					});
+				});
+
+				console.log(masterNotesCollection);
+			} else {
+				console.error('Could not get the last documetn id, the database state in invalid');
+			}
+		});
+	</script>
+</body>
+</html>

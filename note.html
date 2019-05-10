@@ -1,0 +1,449 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Single Note</title>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto|Varela+Round|Open+Sans">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons">
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css">
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.4/jquery.min.js"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>
+    <style type="text/css">
+        body {
+            color: #404E67;
+            background: #F5F7FA;
+            font-family: 'Open Sans', sans-serif;
+        }
+
+        .table-wrapper {
+            width: 700px;
+            margin: 30px auto;
+            background: #fff;
+            padding: 20px;
+            box-shadow: 0 1px 1px rgba(0, 0, 0, .05);
+        }
+
+        .table-title {
+            padding-bottom: 10px;
+            margin: 0 0 10px;
+        }
+
+        .table-title h2 {
+            margin: 6px 0 0;
+            font-size: 22px;
+        }
+
+        .table-title .add-new {
+            float: right;
+            height: 30px;
+            font-weight: bold;
+            font-size: 12px;
+            text-shadow: none;
+            min-width: 100px;
+            border-radius: 50px;
+            line-height: 13px;
+        }
+
+        .table-title .add-new i {
+            margin-right: 4px;
+        }
+
+        table.table {
+            table-layout: fixed;
+        }
+
+        table.table tr th, table.table tr td {
+            border-color: #e9e9e9;
+        }
+
+        table.table th i {
+            font-size: 13px;
+            margin: 0 5px;
+            cursor: pointer;
+        }
+
+        table.table th:last-child {
+            width: 100px;
+        }
+
+        table.table td a {
+            cursor: pointer;
+            display: inline-block;
+            margin: 0 5px;
+            min-width: 24px;
+        }
+
+        table.table td a.add {
+            color: #27C46B;
+        }
+
+        table.table td a.delete {
+            color: #E34724;
+        }
+
+        table.table td i {
+            font-size: 19px;
+        }
+
+        table.table td a.add i {
+            font-size: 24px;
+            margin-right: -1px;
+            position: relative;
+            top: 3px;
+        }
+
+        table.table .form-control {
+            height: 32px;
+            line-height: 32px;
+            box-shadow: none;
+            border-radius: 2px;
+        }
+
+        table.table .form-control.error {
+            border-color: #f50000;
+        }
+
+        table.table td .add {
+            display: none;
+        }
+
+        .d-none {
+            display: none !important;
+        }
+
+        .p-3 {
+            padding: 1rem !important;
+        }
+
+        .alert {
+            position: relative;
+            padding: .75rem 1.25rem;
+            margin-bottom: 1rem;
+            border: 1px solid transparent;
+            border-radius: .25rem;
+        }
+
+        .alert-danger {
+            color: #721c24;
+            background-color: #f8d7da;
+            border-color: #f5c6cb;
+        }
+    </style>
+</head>
+<body>
+<div class="container d-none">
+    <div class="table-wrapper">
+        <div class="error"></div>
+    </div>
+</div>
+<div class="main">
+    <div class="container">
+        <div class="table-wrapper">
+            <div class="table-title">
+                <div class="row">
+                    <div class="col-sm-8"><h2 id="note-name"></h2></div>
+                </div>
+            </div>
+            <table class="table table-bordered main-info">
+                <thead>
+                <tr>
+                    <th>Created date</th>
+                    <th>Name</th>
+                    <th>Option 1</th>
+                    <th>Option 2</th>
+                </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+        </div>
+    </div>
+    <div class="container">
+        <div class="table-wrapper">
+            <div class="table-title">
+                <div class="row">
+                    <div class="col-sm-12">
+                        <button type="button" class="btn btn-info add-new"><i class="fa fa-plus"></i> Add New</button>
+                    </div>
+                </div>
+            </div>
+            <table class="table table-bordered notes">
+                <thead>
+                <tr>
+                    <th>Note</th>
+                    <th>Label</th>
+                    <th>Actions</th>
+                </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/5.11.1/firebase-app.js"></script>
+
+<!-- Add Firebase products that you want to use -->
+<script src="https://www.gstatic.com/firebasejs/5.11.1/firebase-auth.js"></script>
+<script src="https://www.gstatic.com/firebasejs/5.11.1/firebase-firestore.js"></script>
+<script type="text/javascript">
+    function createDocument(document, input, $this) {
+        var db = firebase.firestore();
+
+        var masterNotesCollection = db.collection("MasterNotes");
+
+        var shortId = getShortId();
+
+        masterNotesCollection.where("shortId", "==", parseInt(shortId)).get()
+            .then(function (result) {
+                if (result.docs[0].id) {
+                    var data = result.docs[0].data();
+
+                    var notes = data.notes;
+
+                    notes.push({
+                        note: document.note,
+                        label: document.label,
+                    });
+
+                    masterNotesCollection.doc(result.docs[0].id).update({
+                        notes: notes
+                    }).then(function () {
+                        updateView(input, $this);
+                    }).catch(function (error) {
+                        $('.table-wrapper').addClass('d-none');
+                        $('.error').removeClass('d-none');
+                        $('.error').html('<p class="alert alert-danger">Could not insert a new note</p>');
+                        console.error(error);
+                    });
+                }
+            })
+            .catch(function (error) {
+                $('.table-wrapper').addClass('d-none');
+                $('.error').removeClass('d-none');
+                $('.error').html('<p class="alert alert-danger">Could not get the notes</p>');
+                console.error(error);
+            });
+    }
+
+    function getShortId() {
+        var hrefParts = window.location.href.split("/");
+
+        return hrefParts[hrefParts.length - 1];
+    }
+
+    function bindEventHandlers() {
+        var $ = jQuery;
+
+        // Append table with add row form on add new button click
+        $(".add-new").click(function () {
+            var loginUserClass = firebase.auth().currentUser ? '' : 'd-none';
+
+            var actions = '<a class="add" title="Add" data-toggle="tooltip"><i class="material-icons">&#xE03B;</i></a>' +
+                '<a class="delete ' + loginUserClass + '" title="Delete" data-toggle="tooltip"><i class="material-icons">&#xE872;</i></a>';
+
+            $(this).attr("disabled", "disabled");
+            var index = $(".table-wrapper table.notes tbody tr:last-child").index();
+            var row = '<tr>' +
+                '<td><input type="text" class="form-control" name="note" id="note"></td>' +
+                '<td><input type="text" class="form-control" name="label" id="label"></td>' +
+                '<td class="actions" rowspan="2">' + actions + '</td>' +
+                '</tr>';
+            $(".table-wrapper table.notes").append(row);
+            $(".table-wrapper table.notes tbody tr").eq(index + 1).find(".add").toggle();
+            $('[data-toggle="tooltip"]').tooltip();
+        });
+
+        // Add row on add button click
+        $(document).on("click", ".add", function () {
+            var empty = false;
+            var input = $(this).parents("tr").find('input[type="text"]');
+            input.each(function () {
+                if (!$(this).val()) {
+                    $(this).addClass("error");
+                    empty = true;
+                } else {
+                    $(this).removeClass("error");
+                }
+            });
+            $(this).parents("tr").find(".error").first().focus();
+            if (!empty) {
+                var note = $("#note").val();
+                var label = $("#label").val();
+
+                createDocument({
+                    note: note,
+                    label: label
+                }, input, $(this));
+            }
+        });
+
+        // Delete row on delete button click
+        $(document).on("click", ".delete", function () {
+            $(this).parents("tr").next('tr').remove();
+            $(this).parents("tr").remove();
+            $(".add-new").removeAttr("disabled");
+        });
+    }
+
+    function updateView(input, $this) {
+        input.each(function () {
+            $(this).parent("td").html($(this).val());
+        });
+        $this.parents("tr").find(".add, .edit").toggle();
+        $(".add-new").removeAttr("disabled");
+
+        $("#options-wrapper").remove();
+        $($this.parents("tr").find(".actions")).removeAttr('rowspan');
+
+        reloadNotes();
+    }
+
+    function reloadNotes() {
+        var noteShortId = getShortId();
+
+        var db = firebase.firestore();
+
+        db.collection("MasterNotes").where("shortId", "==", parseInt(noteShortId)).get()
+            .then(function (result) {
+                if (result.docs[0].id) {
+                    var data = result.docs[0].data();
+
+                    if (data.status === "delete") {
+                        $('.main').addClass('d-none');
+                        $('.error').closest('.container').removeClass('d-none');
+                        $('.error').html('<p class="alert alert-danger">The record was deleted</p>');
+                    } else {
+                        $('#note-name').text(data.name);
+
+                        $('.main-info tbody').html('<tr>' +
+                            '<td>' + data.dateCreated + '</td>' +
+                            '<td>' + data.name + '</td>' +
+                            '<td>' + data.options.op1 + '</td>' +
+                            '<td>' + data.options.op2 + '</td>' +
+                            '</tr>');
+
+                        var $notes = $('.notes tbody');
+
+                        $notes.html('');
+
+                        for (var note of data.notes) {
+                            $notes.append('<tr>' +
+                                '<td>' + note.note + '</td>' +
+                                '<td>' + note.label + '</td>' +
+                                '<td></td>' +
+                                '</tr>')
+                        }
+
+                        bindEventHandlers();
+                    }
+                }
+            })
+            .catch(function (error) {
+                $('.main').addClass('d-none');
+                $('.error').closest('.container').removeClass('d-none');
+                $('.error').html('<p class="alert alert-danger">Could not find the record</p>');
+                console.error(error);
+            });
+    }
+
+    function getLocationOrIP() {
+        return new Promise(function (resolve) {
+            if (!navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(function (position) {
+                    resolve({
+                        lat: position.coords.latitude,
+                        lng: position.coords.longitude
+                    });
+                });
+            } else {
+                $.getJSON("https://httpbin.org/ip", function(data){
+                    if (data && data.origin) {
+                        var ips = data.origin.split(', ');
+
+                        if (ips && ips[0]) {
+                            resolve(ips[0]);
+                        } else {
+                            resolve(null);
+                        }
+                    } else {
+                        resolve(null);
+                    }
+                });
+            }
+        });
+    }
+
+    function updateStats() {
+        var db = firebase.firestore();
+
+        var masterNotesCollection = db.collection("MasterNotes");
+        var masterStatsCollection = db.collection("MasterStats");
+
+        var shortId = getShortId();
+
+        masterNotesCollection.where("shortId", "==", parseInt(shortId)).get()
+            .then(function (result) {
+                if (result.docs[0].id) {
+                    masterNotesCollection.doc(result.docs[0].id).update({
+                        totalVisits: result.docs[0].data().totalVisits + 1
+                    }).catch(function (error) {
+                        $('.table-wrapper').addClass('d-none');
+                        $('.error').removeClass('d-none');
+                        $('.error').html('<p class="alert alert-danger">Could not update total visits</p>');
+                        console.error(error);
+                    });
+
+                    const now = new Date();
+                    const dateCreated = now.getFullYear() + ((now.getMonth() + 1) < 10 ? "0" + (now.getMonth() + 1) : (now.getMonth() + 1)) + (now.getDate() < 10 ? "0" + now.getDate() : now.getDate());
+
+                    getLocationOrIP().then(function(result) {
+                        if (typeof result === "string") { // ip
+                            masterStatsCollection.add({
+                                shortId: parseInt(shortId),
+                                date: dateCreated,
+                                ip: result,
+                                geo: null
+                            });
+                        } else { // coords or null
+                            masterStatsCollection.add({
+                                shortId: parseInt(shortId),
+                                date: dateCreated,
+                                ip: null,
+                                geo: result
+                            });
+                        }
+                    });
+                }
+            })
+            .catch(function (error) {
+                $('.table-wrapper').addClass('d-none');
+                $('.error').removeClass('d-none');
+                $('.error').html('<p class="alert alert-danger">Could not get the notes</p>');
+                console.error(error);
+            });
+    }
+
+    jQuery(document).ready(function ($) {
+        var firebaseConfig = {
+            apiKey: "AIzaSyBOthBwcREmRXm2OwHDoIQqbzdERufUowE",
+            authDomain: "user-notes-d5283.firebaseapp.com",
+            databaseURL: "https://user-notes-d5283.firebaseio.com",
+            projectId: "user-notes-d5283",
+            storageBucket: "user-notes-d5283.appspot.com",
+            messagingSenderId: "688290206555",
+            appId: "1:688290206555:web:5ecc4a6ba1a7c77d"
+        };
+
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+
+        updateStats();
+
+        reloadNotes();
+    });
+</script>
+</body>
+</html>

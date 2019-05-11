@@ -15,10 +15,6 @@
     <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>
 </head>
 <body>
-    <div class="nav p-3">
-        <button type="button" class="btn btn-info login-google" onclick="googleLogin()">Login with google</button>
-        <button type="button" class="btn btn-info login-facebook" onclick="facebookLogin()">Login with facebook</button>
-    </div>
     <div class="nav-login p-3">
         <button type="button" class="btn btn-info login-google" onclick="logout()">Logout</button>
     </div>
@@ -28,7 +24,7 @@
         <div class="table-wrapper">
             <div class="table-title">
                 <div class="row">
-                    <div class="col-sm-8"><h2 class="master-note-title">Sample Note</h2></div>
+                    <div class="col-sm-8"><h2>User Notes</h2></div>
                     <div class="col-sm-4">
                         <button type="button" class="btn btn-info add-new"><i class="fa fa-plus"></i> Add New</button>
                     </div>
@@ -44,46 +40,6 @@
                 </thead>
                 <tbody></tbody>
             </table>
-
-            <div>
-                <div class="d-flex">
-                    <div class="form-check ml-auto mr-3">
-                      <input class="form-check-input" type="checkbox" value="" id="option1">
-                      <label class="form-check-label" for="option1">
-                        Option 1
-                      </label>
-                    </div>
-                    <div class="form-check mr-auto">
-                      <input class="form-check-input" type="checkbox" value="" id="option2">
-                      <label class="form-check-label" for="option2">
-                        Option 2
-                      </label>
-                    </div>
-                </div>
-                <div class="d-flex">
-                    <button type="button" class="btn btn-info ml-auto mr-auto" id="save">Save</button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <div class="container d-none">
-        <div class="table-wrapper-2">
-            <table class="table table-bordered">
-                <tbody>
-                    <tr>
-                        <td>
-                            <div class="col-12">
-                                <p class="alert alert-success text-center" id="url"></p>
-                            </div>
-                            <hr/>
-                            <div class="col-12 d-flex">
-                                <button class="btn btn-info ml-auto mr-auto" id="create"><i class="fa fa-plus"></i> Create Another</button>
-                            </div>
-                        </td>
-                    </tr>
-                </tbody>
-            </table>
         </div>
     </div>
 
@@ -94,6 +50,50 @@
     <script src="https://www.gstatic.com/firebasejs/5.11.1/firebase-auth.js"></script>
     <script src="https://www.gstatic.com/firebasejs/5.11.1/firebase-firestore.js"></script>
 
-    <script src="./script.js" type="text/javascript"></script>
+    <script type="text/javascript">
+        function logout() {
+            firebase.auth().signOut().then(function () {
+                var redirectUrl = window.location.href.replace('admin.html', 'index.html');
+                window.location.replace(redirectUrl);
+            }, function (error) {
+                $('.table-wrapper').addClass('d-none');
+                $('.error').removeClass('d-none');
+                $('.error').html('<p class="alert alert-danger">Could not signed out</p>');
+                console.error(error);
+            });
+        }
+
+        function showError(error) {
+            $('.table-wrapper').addClass('d-none');
+            $('.error').removeClass('d-none');
+            $('.error').html('<p class="alert alert-danger">' + error + '</p>');
+        }
+
+        jQuery(document).ready(function() {
+            var firebaseConfig = {
+                apiKey: "AIzaSyBOthBwcREmRXm2OwHDoIQqbzdERufUowE",
+                authDomain: "user-notes-d5283.firebaseapp.com",
+                databaseURL: "https://user-notes-d5283.firebaseio.com",
+                projectId: "user-notes-d5283",
+                storageBucket: "user-notes-d5283.appspot.com",
+                messagingSenderId: "688290206555",
+                appId: "1:688290206555:web:5ecc4a6ba1a7c77d"
+            };
+
+            // Initialize Firebase
+            firebase.initializeApp(firebaseConfig);
+            
+            if (firebase.auth().currentUser) {
+                var redirectUrl = window.location.href.replace('admin.html', 'index.html');
+                window.location.replace(redirectUrl);
+            }
+            
+            $('.add-new').on('click', function() {
+                var redirectUrl = window.location.href.replace('admin.html', 'index.html');
+
+                window.location.replace(redirectUrl);
+            });
+        });
+    </script>
 </body>
-</html>ta
+</html>

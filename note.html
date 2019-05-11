@@ -80,6 +80,10 @@
             color: #27C46B;
         }
 
+        table.table td a.edit {
+            color: #FFC107;
+        }
+
         table.table td a.delete {
             color: #E34724;
         }
@@ -114,6 +118,22 @@
             display: none !important;
         }
 
+        .d-flex {
+            display: flex !important;
+        }
+
+        .ml-auto {
+            margin-left: auto;
+        }
+
+        .mr-auto {
+            margin-right: auto;
+        }
+
+        .mr-3 {
+            margin-right: 1rem;
+        }
+
         .p-3 {
             padding: 1rem !important;
         }
@@ -131,57 +151,61 @@
             background-color: #f8d7da;
             border-color: #f5c6cb;
         }
+
+        .nav,
+        .nav-login {
+            display: none;
+        }
     </style>
 </head>
 <body>
-<div class="container d-none">
-    <div class="table-wrapper">
-        <div class="error"></div>
+    <div class="nav p-3">
+        <button type="button" class="btn btn-info login-google" onclick="googleLogin()">Login with google</button>
+        <button type="button" class="btn btn-info login-facebook" onclick="facebookLogin()">Login with facebook</button>
     </div>
-</div>
-<div class="main">
+    <div class="nav-login p-3">
+        <button type="button" class="btn btn-info login-google" onclick="logout()">Logout</button>
+    </div>
+
     <div class="container">
+        <div class="message d-none"></div>
         <div class="table-wrapper">
             <div class="table-title">
                 <div class="row">
-                    <div class="col-sm-8"><h2 id="note-name"></h2></div>
+                    <div class="col-sm-8"><h2 class="master-note-title"></h2></div>
                 </div>
             </div>
-            <table class="table table-bordered main-info">
-                <thead>
+            <table class="table table-bordered">
+            <thead>
                 <tr>
-                    <th>Created date</th>
-                    <th>Name</th>
-                    <th>Option 1</th>
-                    <th>Option 2</th>
-                </tr>
-                </thead>
-                <tbody></tbody>
-            </table>
-        </div>
-    </div>
-    <div class="container">
-        <div class="table-wrapper">
-            <div class="table-title">
-                <div class="row">
-                    <div class="col-sm-12">
-                        <button type="button" class="btn btn-info add-new"><i class="fa fa-plus"></i> Add New</button>
-                    </div>
-                </div>
-            </div>
-            <table class="table table-bordered notes">
-                <thead>
-                <tr>
-                    <th>Note</th>
                     <th>Label</th>
-                    <th>Actions</th>
+                    <th>Notes</th>
+                    <th class="logged-in d-none">Actions</th>
                 </tr>
-                </thead>
-                <tbody></tbody>
-            </table>
+            </thead>
+            <tbody></tbody>
+        </table>
+
+        <div>
+            <div class="d-flex">
+                <div class="form-check ml-auto mr-3">
+                    <input class="form-check-input" type="checkbox" id="option1" disabled>
+                    <label class="form-check-label" for="option1">
+                        Option 1
+                    </label>
+                </div>
+                <div class="mr-auto">
+                    <input class="form-check-input" type="checkbox" id="option2" disabled>
+                    <label class="form-check-label" for="option2">
+                        Option 2
+                    </label>
+                </div>
+            </div>
+            <div class="d-flex">
+                <button type="button" class="btn btn-info ml-auto mr-auto d-none" id="update">Update</button>
+            </div>
         </div>
     </div>
-</div>
 
 <script src="https://www.gstatic.com/firebasejs/5.11.1/firebase-app.js"></script>
 
@@ -189,116 +213,29 @@
 <script src="https://www.gstatic.com/firebasejs/5.11.1/firebase-auth.js"></script>
 <script src="https://www.gstatic.com/firebasejs/5.11.1/firebase-firestore.js"></script>
 <script type="text/javascript">
-    function createDocument(document, input, $this) {
-        var db = firebase.firestore();
+    function hasEmptyRows(highlight = false) {
+        var empty = false;
 
-        var masterNotesCollection = db.collection("MasterNotes");
-
-        var shortId = getShortId();
-
-        masterNotesCollection.where("shortId", "==", parseInt(shortId)).get()
-            .then(function (result) {
-                if (result.docs[0].id) {
-                    var data = result.docs[0].data();
-
-                    var notes = data.notes;
-
-                    notes.push({
-                        note: document.note,
-                        label: document.label,
-                    });
-
-                    masterNotesCollection.doc(result.docs[0].id).update({
-                        notes: notes
-                    }).then(function () {
-                        updateView(input, $this);
-                    }).catch(function (error) {
-                        $('.table-wrapper').addClass('d-none');
-                        $('.error').removeClass('d-none');
-                        $('.error').html('<p class="alert alert-danger">Could not insert a new note</p>');
-                        console.error(error);
-                    });
+        $('.table-wrapper table tbody tr input[type="text"]').each(function() {
+            if(!$(this).val()){
+                if (highlight) {
+                    $(this).addClass("error");
                 }
-            })
-            .catch(function (error) {
-                $('.table-wrapper').addClass('d-none');
-                $('.error').removeClass('d-none');
-                $('.error').html('<p class="alert alert-danger">Could not get the notes</p>');
-                console.error(error);
-            });
+                empty = true;
+            } else{
+                if (highlight) {
+                    $(this).removeClass("error");
+                }
+            }
+        });
+
+        return empty;
     }
 
     function getShortId() {
         var hrefParts = window.location.href.split("/");
 
         return hrefParts[hrefParts.length - 1];
-    }
-
-    function bindEventHandlers() {
-        var $ = jQuery;
-
-        // Append table with add row form on add new button click
-        $(".add-new").click(function () {
-            var loginUserClass = firebase.auth().currentUser ? '' : 'd-none';
-
-            var actions = '<a class="add" title="Add" data-toggle="tooltip"><i class="material-icons">&#xE03B;</i></a>' +
-                '<a class="delete ' + loginUserClass + '" title="Delete" data-toggle="tooltip"><i class="material-icons">&#xE872;</i></a>';
-
-            $(this).attr("disabled", "disabled");
-            var index = $(".table-wrapper table.notes tbody tr:last-child").index();
-            var row = '<tr>' +
-                '<td><input type="text" class="form-control" name="note" id="note"></td>' +
-                '<td><input type="text" class="form-control" name="label" id="label"></td>' +
-                '<td class="actions" rowspan="2">' + actions + '</td>' +
-                '</tr>';
-            $(".table-wrapper table.notes").append(row);
-            $(".table-wrapper table.notes tbody tr").eq(index + 1).find(".add").toggle();
-            $('[data-toggle="tooltip"]').tooltip();
-        });
-
-        // Add row on add button click
-        $(document).on("click", ".add", function () {
-            var empty = false;
-            var input = $(this).parents("tr").find('input[type="text"]');
-            input.each(function () {
-                if (!$(this).val()) {
-                    $(this).addClass("error");
-                    empty = true;
-                } else {
-                    $(this).removeClass("error");
-                }
-            });
-            $(this).parents("tr").find(".error").first().focus();
-            if (!empty) {
-                var note = $("#note").val();
-                var label = $("#label").val();
-
-                createDocument({
-                    note: note,
-                    label: label
-                }, input, $(this));
-            }
-        });
-
-        // Delete row on delete button click
-        $(document).on("click", ".delete", function () {
-            $(this).parents("tr").next('tr').remove();
-            $(this).parents("tr").remove();
-            $(".add-new").removeAttr("disabled");
-        });
-    }
-
-    function updateView(input, $this) {
-        input.each(function () {
-            $(this).parent("td").html($(this).val());
-        });
-        $this.parents("tr").find(".add, .edit").toggle();
-        $(".add-new").removeAttr("disabled");
-
-        $("#options-wrapper").remove();
-        $($this.parents("tr").find(".actions")).removeAttr('rowspan');
-
-        reloadNotes();
     }
 
     function reloadNotes() {
@@ -313,49 +250,81 @@
 
                     if (data.status === "delete") {
                         $('.main').addClass('d-none');
-                        $('.error').closest('.container').removeClass('d-none');
-                        $('.error').html('<p class="alert alert-danger">The record was deleted</p>');
+                        $('.message').closest('.container').removeClass('d-none');
+                        $('.message').html('<p class="alert alert-danger">The record was deleted</p>');
                     } else {
-                        $('#note-name').text(data.name);
+                        $('.master-note-title').text(data.name)
 
-                        $('.main-info tbody').html('<tr>' +
-                            '<td>' + data.dateCreated + '</td>' +
-                            '<td>' + data.name + '</td>' +
-                            '<td>' + data.options.op1 + '</td>' +
-                            '<td>' + data.options.op2 + '</td>' +
-                            '</tr>');
-
-                        var $notes = $('.notes tbody');
-
+                        $notes = $('.table-bordered tbody');
                         $notes.html('');
+
+                        var actions = '<a class="add" title="Add" data-toggle="tooltip"><i class="material-icons">&#xE03B;</i></a>' +
+                            '<a class="edit" title="Edit" data-toggle="tooltip"><i class="material-icons">&#xE254;</i></a>' +
+                            '<a class="delete" title="Delete" data-toggle="tooltip"><i class="material-icons">&#xE872;</i></a>';
 
                         for (var note of data.notes) {
                             $notes.append('<tr>' +
-                                '<td>' + note.note + '</td>' +
-                                '<td>' + note.label + '</td>' +
-                                '<td></td>' +
+                                '<td data-name="note">' + note.note + '</td>' +
+                                '<td data-name="label">' + note.label + '</td>' +
+                                '<td class="logged-in d-none">' + actions + '</td>' +
                                 '</tr>')
                         }
 
-                        bindEventHandlers();
+                        if (data.options.op1) {
+                            $('#option1').attr('checked', 'checked');
+                        }
+
+                        if (data.options.op2) {
+                            $('#option2').attr('checked', 'checked');
+                        }
+
+                        if (firebase.auth().currentUser) {
+                            $('#update').removeClass('d-none');
+                            $('#option1').removeAttr("disabled");
+                            $('#option2').removeAttr("disabled");
+                            $('.logged-in').each(function() {
+                                $(this).removeClass('d-none');
+                            });
+                        } else {
+                            $('#update').addClass('d-none');
+                            $('#option1').attr("disabled", "disabled");
+                            $('#option2').attr("disabled", "disabled");
+                            $('.logged-in').each(function() {
+                                $(this).addClass('d-none');
+                            });
+                        }
                     }
                 }
             })
             .catch(function (error) {
                 $('.main').addClass('d-none');
-                $('.error').closest('.container').removeClass('d-none');
-                $('.error').html('<p class="alert alert-danger">Could not find the record</p>');
+                $('.message').closest('.container').removeClass('d-none');
+                $('.mesasge').html('<p class="alert alert-danger">Could not find the record</p>');
                 console.error(error);
             });
     }
 
     function getLocationOrIP() {
         return new Promise(function (resolve) {
-            if (!navigator.geolocation) {
+            if (navigator.geolocation) {
                 navigator.geolocation.getCurrentPosition(function (position) {
                     resolve({
                         lat: position.coords.latitude,
                         lng: position.coords.longitude
+                    });
+                }, function(error) {
+                    $.getJSON("https://httpbin.org/ip", function(data){
+                        if (data && data.origin) {
+                            var ips = data.origin.split(', ');
+
+                            if (ips && ips[0]) {
+                                resolve(ips[0]);
+                            } else {
+                                resolve(null);
+                            }
+                        } else {
+                            resolve(null);
+                        }
                     });
                 });
             } else {
@@ -374,7 +343,7 @@
                 });
             }
         });
-    }
+    } 
 
     function updateStats() {
         var db = firebase.firestore();
@@ -391,13 +360,13 @@
                         totalVisits: result.docs[0].data().totalVisits + 1
                     }).catch(function (error) {
                         $('.table-wrapper').addClass('d-none');
-                        $('.error').removeClass('d-none');
-                        $('.error').html('<p class="alert alert-danger">Could not update total visits</p>');
+                        $('.message').removeClass('d-none');
+                        $('.message').html('<p class="alert alert-danger">Could not update total visits</p>');
                         console.error(error);
                     });
 
                     const now = new Date();
-                    const dateCreated = now.getFullYear() + ((now.getMonth() + 1) < 10 ? "0" + (now.getMonth() + 1) : (now.getMonth() + 1)) + (now.getDate() < 10 ? "0" + now.getDate() : now.getDate());
+                    var dateCreated = now.getUTCFullYear() + '-' + now.getUTCMonth() + '-' + now.getUTCDate() + ' ' + now.getUTCHours() + ':' + now.getUTCMinutes() + ':' + now.getUTCSeconds();
 
                     getLocationOrIP().then(function(result) {
                         if (typeof result === "string") { // ip
@@ -420,10 +389,69 @@
             })
             .catch(function (error) {
                 $('.table-wrapper').addClass('d-none');
-                $('.error').removeClass('d-none');
-                $('.error').html('<p class="alert alert-danger">Could not get the notes</p>');
+                $('.message').removeClass('d-none');
+                $('.message').html('<p class="alert alert-danger">Could not get the notes</p>');
                 console.error(error);
             });
+    } 
+
+    function updateNote() {
+        var name = ($('.master-note-title-input').length === 1) ? $('.master-note-title-input').val() : $('.master-note-title').text();
+
+        notes = [];
+
+        $('.message').html('');
+
+        if ($('.table-wrapper table tbody tr').length > 0) {
+            $('.table-wrapper table tbody tr').each(function() {
+                var label = ($(this).find('td input[name="label"]').length === 1) ? $(this).find('td input[name="label"]').val() : $(this).find('td[data-name="label"]').text();
+                var note = ($(this).find('td input[name="note"]').length === 1) ? $(this).find('td input[name="note"]').val() : $(this).find('td[data-name="note"]').text();
+
+                notes.push({
+                    label: escapeHtml(label),
+                    note: escapeHtml(note),
+                });
+            });
+
+            var document = {
+                name: escapeHtml(name),
+                notes: notes,
+                options: {
+                    op1: $('#option1').is(':checked'),
+                    op2: $('#option2').is(':checked')
+                }
+            };
+
+            var db = firebase.firestore();
+
+            var shortId = getShortId();
+
+            db.collection("MasterNotes").where("shortId", "==", parseInt(shortId)).get()
+                .then(function(result) {
+                    if (result.docs.length === 1) {
+                        db.collection("MasterNotes").doc(result.docs[0].id).update(document)
+                            .then(function(result) {
+                                $('.message').removeClass('d-none');
+                                $('.message').html('<p class="alert alert-success">Note saved</p>');
+                            })
+                    } else {
+                        $('.table-wrapper').addClass('d-none');
+                        $('.message').removeClass('d-none');
+                        $('.message').html('<p class="alert alert-danger">Could not find the note to update</p>');
+                    }
+                })
+                .catch(function(error){
+                    $('.table-wrapper').addClass('d-none');
+                    $('.message').removeClass('d-none');
+                    $('.message').html('<p class="alert alert-danger">' + error + '</p>');
+                });
+        }
+    }
+
+    function escapeHtml(str) {
+        var div = document.createElement('div');
+        div.appendChild(document.createTextNode(str));
+        return div.innerHTML;
     }
 
     jQuery(document).ready(function ($) {
@@ -443,7 +471,135 @@
         updateStats();
 
         reloadNotes();
+
+        firebase.auth().onAuthStateChanged(function (user) {
+            if (user) {
+                $('.nav').hide();
+                $('.nav-login').show();
+            } else {
+                $('.nav').show();
+                $('.nav-login').hide();
+            }
+
+            reloadNotes();
+        });
+
+        $(document).on('click', '.master-note-title', function(event) {
+            if (firebase.auth().currentUser) {
+                var value = $(this).text();
+                var $input = $('<input type="text" value="' + value + '" class="master-note-title-input">');
+                $input.on('blur', function() {
+                    $(this).parent('div').html('<h2 class="master-note-title">' + $(this).val() + '</h2>');
+                });
+                $input.focus();
+
+                $(this).parent().append($input);
+                $(this).remove();
+            }
+        });
+
+        $(document).on('click', '.add', function() {
+            var empty = false;
+            var input = $(this).parents("tr").find('input[type="text"]');
+            input.each(function(){
+                if(!$(this).val()){
+                    $(this).addClass("error");
+                    empty = true;
+                } else{
+                    $(this).removeClass("error");
+                }
+            });
+            $(this).parents("tr").find(".error").first().focus();
+            if (!empty) {
+                $(this).parents("tr").find("td:not(:last-child)").each(function () {
+                    $(this).attr('data-name', $(this).find('input').attr('name'))
+                    $(this).html($(this).find('input').val());
+                });
+
+                $(this).closest('tr').find(".edit, .delete").show();
+                $(this).closest('tr').find(".add").hide();
+            }
+        });
+
+        $(document).on('click', '.edit', function() {
+            var inputs = $(this).closest('tr').find("td:not(:last-child)").each(function() {
+                $(this).html('<input type="text" class="form-control" name="' + $(this).attr('data-name') + '" value="' + $(this).text() + '">');
+            });
+
+            $(this).closest('tr').find(".add, .delete").show();
+            $(this).closest('tr').find(".edit").hide();
+
+            $(".add-new").attr("disabled", "disabled");
+        });
+
+        $(document).on("click", ".delete", function () {
+            $(this).parents("tr").remove();
+            $(".add-new").removeAttr("disabled");
+        });
+
+        $('#update').on('click', function() {
+            if (!hasEmptyRows(true)) {
+                updateNote();
+            }
+        });
     });
+
+    function googleLogin() {
+        const provider = new firebase.auth.GoogleAuthProvider();
+
+        firebase.auth().signInWithPopup(provider).then(function (result) {
+            createUserIfNotExist();
+        }).catch(function (error) {
+            $('.table-wrapper').addClass('d-none');
+            $('.message').removeClass('d-none');
+            $('.message').html('<p class="alert alert-danger">' + error.message + '</p>');
+        });
+    }
+
+    function facebookLogin() {
+        var provider = new firebase.auth.FacebookAuthProvider();
+
+        firebase.auth().signInWithPopup(provider).then(function (result) {
+            createUserIfNotExist();
+        }).catch(function (error) {
+            $('.table-wrapper').addClass('d-none');
+            $('.message').removeClass('d-none');
+            $('.message').html('<p class="alert alert-danger">' + error.message + '</p>');
+        });
+    }
+
+    function logout() {
+        firebase.auth().signOut().then(function () {
+            $('.nav').show();
+            $('.nav-login').hide();
+        }, function (error) {
+            $('.table-wrapper').addClass('d-none');
+            $('.message').removeClass('d-none');
+            $('.message').html('<p class="alert alert-danger">Could not signed out</p>');
+        });
+    }
+
+    function createUserIfNotExist() {
+        var db = firebase.firestore();
+
+        const email = firebase.auth().currentUser.email
+        const userProfileCollection = db.collection("UserProfile");
+        userProfileCollection.where("email", "==", email).get()
+            .then(function (result) {
+                if (result.docs.length === 0) {
+                    userProfileCollection.add({
+                        email: email,
+                        notes: []
+                    });
+                }
+            })
+            .catch(function (error) {
+                $('.table-wrapper').addClass('d-none');
+                $('.message').removeClass('d-none');
+                $('.message').html('<p class="alert alert-danger">Could not get the user</p>');
+                console.error(error);
+            });
+    }
 </script>
 </body>
 </html>

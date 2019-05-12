@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>User Notes</title>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto|Varela+Round|Open+Sans">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons">
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css">
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css">
+    <link rel="stylesheet" href="./style.css" type="text/css">
+
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.4/jquery.min.js"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>
+</head>
+<body>
+<div class="nav p-3">
+    <button type="button" class="btn btn-info login-google" onclick="googleLogin()">Login with google</button>
+    <button type="button" class="btn btn-info login-facebook" onclick="facebookLogin()">Login with facebook</button>
+</div>
+<div class="nav-login p-3">
+    <button type="button" class="btn btn-info login-google" onclick="logout()">Logout</button>
+</div>
+<div class="container">
+    <div class="error d-none"></div>
+    <div class="table-wrapper">
+        <div class="table-title">
+            <div class="row">
+                <div class="col-sm-8"><h2 class="master-note-title">User Notes</h2></div>
+                <div class="col-sm-4">
+                    <button type="button" class="btn btn-info add-new"><i class="fa fa-plus"></i> Add New</button>
+                </div>
+            </div>
+        </div>
+        <table class="table table-bordered">
+            <thead>
+            <tr>
+                <th>Name</th>
+                <th>URL</th>
+                <th>Actions</th>
+            </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+    </div>
+</div>
+<!-- Firebase App (the core Firebase SDK) is always required and must be listed first -->
+<script src="https://www.gstatic.com/firebasejs/5.11.1/firebase-app.js"></script>
+
+<!-- Add Firebase products that you want to use -->
+<script src="https://www.gstatic.com/firebasejs/5.11.1/firebase-auth.js"></script>
+<script src="https://www.gstatic.com/firebasejs/5.11.1/firebase-firestore.js"></script>
+<script type="text/javascript">
+    async function addShortId(documentId) {
+        var db = firebase.firestore();
+
+        return new Promise(function (resolve) {
+            db.collection("Settings").doc("lastInsertId").get()
+                .then(function (result) {
+                    var lastInsertId = 0;
+
+                    if (result.data()) {
+                        lastInsertId = result.data().value;
+                    }
+
+                    db.collection("MasterNotes").doc(documentId).update({
+                        shortId: lastInsertId
+                    }).then(function (result) {
+                        db.collection("Settings").doc("lastInsertId").get()
+                            .then(function (result) {
+                                db.collection("Settings").doc("lastInsertId").set({
+                                    value: result.data().value + 1
+                                }).then(function () {
+                                    lastInsertId = result.data().value + 1;
+                                    resolve(result.data().value);
+                                })
+                                    .catch(function (error) {
+                                        $('.table-wrapper').addClass('d-none');
+                                        $('.error').removeClass('d-none');
+                                        $('.error').html('<p class="alert alert-danger">Could not update lastInsertId</p>');
+                                        console.error(error);
+                                    });
+                            })
+                            .catch(function (error) {
+                                $('.table-wrapper').addClass('d-none');
+                                $('.error').removeClass('d-none');
+                                $('.error').html('<p class="alert alert-danger">Could not retrieve the database last inserted id</p>');
+                                console.error(error);
+                            });
+                    })
+                        .catch(function (error) {
+                            $('.table-wrapper').addClass('d-none');
+                            $('.error').removeClass('d-none');
+                            $('.error').html('<p class="alert alert-danger">Could not update short id</p>');
+                            console.error(error);
+                        });
+                })
+                .catch(function (error) {
+                    $('.table-wrapper').addClass('d-none');
+                    $('.error').removeClass('d-none');
+                    $('.error').html('<p class="alert alert-danger">Could not get the last inserted id</p>');
+                    console.error(error);
+                });
+        });
+    }
+
+    function updateView(input, $this) {
+        input.each(function () {
+            $(this).parent("td").html($(this).val());
+        });
+        $this.parents("tr").find(".add, .edit").toggle();
+        $(".add-new").removeAttr("disabled");
+
+        $("#options-wrapper").remove();
+        $($this.parents("tr").find(".actions")).removeAttr('rowspan');
+
+        reloadNotes();
+    }
+
+    function createDocument(document, input, $this) {
+        var db = firebase.firestore();
+
+        var masterNotesCollection = db.collection("MasterNotes");
+
+        masterNotesCollection.add(document)
+            .then(async function (result) {
+                if (result.id) {
+                    addShortId(result.id).then(function (shortId) {
+                        if (firebase.auth().currentUser) {
+                            var userProfileCollection = db.collection("UserProfile");
+
+                            userProfileCollection.where("email", "==", firebase.auth().currentUser.email).get()
+                                .then(function (result) {
+                                    var notes = result.docs[0].data().notes;
+
+                                    if (notes.indexOf(shortId) === -1) {
+                                        notes.push(shortId);
+
+                                        userProfileCollection.doc(result.docs[0].id).update({
+                                            notes: notes
+                                        })
+                                    }
+                                })
+                                .catch(function (error) {
+                                    $('.table-wrapper').addClass('d-none');
+                                    $('.error').removeClass('d-none');
+                                    $('.error').html('<p class="alert alert-danger">Could not get the current user</p>');
+                                    console.error(error);
+                                });
+                        }
+
+                        updateView(input, $this);
+                    });
+                }
+            })
+            .catch(function (error) {
+                $('.table-wrapper').addClass('d-none');
+                $('.error').removeClass('d-none');
+                $('.error').html('<p class="alert alert-danger">Could not insert a new record into database</p>');
+                console.error(error);
+            });
+    }
+
+    async function updateDocument(shortId, doc, input, $this) {
+        var db = firebase.firestore();
+
+        db.collection("MasterNotes").where("shortId", "==", parseInt(shortId)).get()
+            .then(function (result) {
+                if (result.docs[0].id) {
+                    db.collection("MasterNotes").doc(result.docs[0].id).update(doc)
+                        .then(function (result) {
+                            updateView(input, $this);
+                        })
+                        .catch(function (error) {
+                            $('.table-wrapper').addClass('d-none');
+                            $('.error').removeClass('d-none');
+                            $('.error').html('<p class="alert alert-danger">Could not update the record</p>');
+                            console.error(error);
+                        });
+                }
+            })
+            .catch(function (error) {
+                $('.table-wrapper').addClass('d-none');
+                $('.error').removeClass('d-none');
+                $('.error').html('<p class="alert alert-danger">Could not find the record</p>');
+                console.error(error);
+            });
+    }
+
+    function createUserIfNotExist() {
+        var db = firebase.firestore();
+
+        const email = firebase.auth().currentUser.email
+        const userProfileCollection = db.collection("UserProfile");
+        userProfileCollection.where("email", "==", email).get()
+            .then(function (result) {
+                if (result.docs.length === 0) {
+                    userProfileCollection.add({
+                        email: email,
+                        notes: []
+                    });
+                }
+            })
+            .catch(function (error) {
+                $('.table-wrapper').addClass('d-none');
+                $('.error').removeClass('d-none');
+                $('.error').html('<p class="alert alert-danger">Could not get the user</p>');
+                console.error(error);
+            });
+    }
+
+    function googleLogin() {
+        const provider = new firebase.auth.GoogleAuthProvider();
+
+        firebase.auth().signInWithPopup(provider).then(function (result) {
+            createUserIfNotExist();
+            $('.nav').toggle();
+        })
+            .catch(function (error) {
+                $('.table-wrapper').addClass('d-none');
+                $('.error').removeClass('d-none');
+                $('.error').html('<p class="alert alert-danger">' + error.message + '</p>');
+                console.error(error);
+            });
+    }
+
+    function facebookLogin() {
+        var provider = new firebase.auth.FacebookAuthProvider();
+
+        firebase.auth().signInWithPopup(provider).then(function (result) {
+            createUserIfNotExist();
+            $('.nav').toggle();
+        }).catch(function (error) {
+            $('.table-wrapper').addClass('d-none');
+            $('.error').removeClass('d-none');
+            $('.error').html('<p class="alert alert-danger">' + error.message + '</p>');
+            console.error(error);
+        });
+    }
+
+    function logout() {
+        firebase.auth().signOut().then(function () {
+            $('.nav').show();
+            $('.nav-login').hide();
+        }, function (error) {
+            $('.table-wrapper').addClass('d-none');
+            $('.error').removeClass('d-none');
+            $('.error').html('<p class="alert alert-danger">Could not signed out</p>');
+            console.error(error);
+        });
+    }
+
+    function getUrl(shortId) {
+        return window.location.href.replace(/index\.html/, '') + shortId;
+    }
+
+    function reloadNotes() {
+        var db = firebase.firestore();
+
+        db.collection("Settings").doc("lastInsertId").get()
+            .then(function (result) {
+                if (result.data()) {
+                    lastInsertId = result.data().value;
+                } else {
+                    db.collection("Settings").doc("lastInsertId").set({value: 0});
+                }
+            })
+            .catch(function (error) {
+                $('.table-wrapper').addClass('d-none');
+                $('.error').removeClass('d-none');
+                $('.error').html('<p class="alert alert-danger">Could not retrieve the database last inserted id</p>');
+                console.error(error);
+            });
+
+        var masterNotesCollection = db.collection("MasterNotes");
+
+        masterNotesCollection.get()
+            .then(function (querySnapshot) {
+                var loginUserClass = firebase.auth().currentUser ? '' : 'd-none';
+
+                var actions = '<a class="add" title="Add" data-toggle="tooltip"><i class="material-icons">&#xE03B;</i></a>' +
+                    '<a class="edit ' + loginUserClass + '" title="Edit" data-toggle="tooltip"><i class="material-icons">&#xE254;</i></a>' +
+                    '<a class="delete ' + loginUserClass + '" title="Delete" data-toggle="tooltip"><i class="material-icons">&#xE872;</i></a>';
+
+                $(".table-wrapper").removeClass("d-none");
+                $(".error").addClass("d-none");
+
+                $(".table-wrapper table tbody tr").remove();
+
+                querySnapshot.forEach(function (doc) {
+                    if (!doc.data().status || doc.data().status !== "delete") {
+                        var index = $(".table-wrapper table tbody tr:last-child").index();
+                        var row = $('<tr>' +
+                            '<td data-name="name">' + doc.data().name + '</td>' +
+                            '<td data-name="url"><a href="' + getUrl(doc.data().shortId) + '" target="_blank">' + getUrl(doc.data().shortId) + '</a></td>' +
+                            '<td class="actions">' + actions + '</td></tr>' +
+                            '</tr');
+
+                        row.data('document', doc.data());
+
+                        $(".table-wrapper table").append(row);
+                        $('[data-toggle="tooltip"]').tooltip();
+                    }
+                });
+
+                actions = '<a class="add" title="Add" data-toggle="tooltip"><i class="material-icons">&#xE03B;</i></a>' +
+                    '<a class="edit d-none" title="Edit" data-toggle="tooltip"><i class="material-icons">&#xE254;</i></a>' +
+                    '<a class="delete d-none" title="Delete" data-toggle="tooltip"><i class="material-icons">&#xE872;</i></a>';
+            })
+            .catch(function (error) {
+                $('.table-wrapper').addClass('d-none');
+                $('.error').removeClass('d-none');
+                $('.error').html('<p class="alert alert-danger">Could not get the data from the database</p>');
+                console.error(error);
+            });
+
+        $('[data-toggle="tooltip"]').tooltip();
+    }
+
+    $(document).ready(function ($) {
+        // TODO: Replace the following with your app's Firebase project configuration
+        var firebaseConfig = {
+            apiKey: "AIzaSyBOthBwcREmRXm2OwHDoIQqbzdERufUowE",
+            authDomain: "user-notes-d5283.firebaseapp.com",
+            databaseURL: "https://user-notes-d5283.firebaseio.com",
+            projectId: "user-notes-d5283",
+            storageBucket: "user-notes-d5283.appspot.com",
+            messagingSenderId: "688290206555",
+            appId: "1:688290206555:web:5ecc4a6ba1a7c77d"
+        };
+
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+
+        $('.nav').hide();
+        $('.nav-login').hide();
+
+        firebase.auth().onAuthStateChanged(function (user) {
+            if (user) {
+                $('.nav').hide();
+                $('.nav-login').show();
+            } else {
+                $('.nav').show();
+                $('.nav-login').hide();
+            }
+
+            reloadNotes();
+        });
+
+        // Append table with add row form on add new button click
+        $(".add-new").click(function () {
+            var loginUserClass = firebase.auth().currentUser ? '' : 'd-none';
+
+            var actions = '<a class="add" title="Add" data-toggle="tooltip"><i class="material-icons">&#xE03B;</i></a>' +
+                '<a class="edit ' + loginUserClass + '" title="Edit" data-toggle="tooltip"><i class="material-icons">&#xE254;</i></a>' +
+                '<a class="delete ' + loginUserClass + '" title="Delete" data-toggle="tooltip"><i class="material-icons">&#xE872;</i></a>';
+
+            $(this).attr("disabled", "disabled");
+            var index = $(".table-wrapper table tbody tr:last-child").index();
+            var row = '<tr>' +
+                '<td colspan="2"><input type="text" class="form-control" name="name" id="name"></td>' +
+                '<td class="actions" rowspan="2">' + actions + '</td>' +
+                '</tr><tr id="options-wrapper">' +
+                '<td colspan="2">' +
+                '<input type="checkbox" id="option1"/> <label for="option1">Option 1</label>' +
+                '<br/>' +
+                '<input type="checkbox" id="option2"/> <label for="option2">Option 2</label>' +
+                '</td>' +
+                '</tr';
+            $(".table-wrapper table").append(row);
+            $(".table-wrapper table tbody tr").eq(index + 1).find(".add, .edit").toggle();
+            $('[data-toggle="tooltip"]').tooltip();
+        });
+        // Add row on add button click
+        $(document).on("click", ".add", function () {
+            var empty = false;
+            var input = $(this).parents("tr").find('input[type="text"]');
+            input.each(function () {
+                if (!$(this).val()) {
+                    $(this).addClass("error");
+                    empty = true;
+                } else {
+                    $(this).removeClass("error");
+                }
+            });
+            $(this).parents("tr").find(".error").first().focus();
+            if (!empty) {
+                var name = $("#name").val();
+
+                var option1 = $("#option1").is(":checked");
+                var option2 = $("#option2").is(":checked");
+
+                const now = new Date();
+                const dateCreated = now.getFullYear() + ((now.getMonth() + 1) < 10 ? "0" + (now.getMonth() + 1) : (now.getMonth() + 1)) + (now.getDate() < 10 ? "0" + now.getDate() : now.getDate());
+
+                if ($(this).closest("tr").data("document")) {
+                    updateDocument($(this).closest("tr").data("document").shortId, {
+                        name: name,
+                        options: {
+                            op1: option1,
+                            op2: option2
+                        }
+                    }, input, $(this));
+                } else {
+                    createDocument({
+                        name: name,
+                        dateCreated: dateCreated,
+                        totalVisits: 0,
+                        notes: [],
+                        options: {
+                            op1: option1,
+                            op2: option2
+                        }
+                    }, input, $(this));
+                }
+            }
+        });
+        // Edit row on edit button click
+        $(document).on("click", ".edit", function () {
+            $(this).closest('td').attr('rowspan', 2)
+            var doc = $(this).closest("tr").data('document');
+
+            var checkedAttribute1 = doc.options.op1 ? 'checked' : '';
+            var checkedAttribute2 = doc.options.op2 ? 'checked' : '';
+
+            $(this).parents("tr").find("td:not(:last-child)").each(function () {
+                $(this).html('<input type="text" id="' + $(this).data('name') + '" class="form-control" value="' + $(this).text() + '">');
+            });
+            $('<tr id="options-wrapper">' +
+                '<td>' +
+                '<input type="checkbox" id="option1" ' + checkedAttribute1 + '/> <label for="option1">Option 1</label>' +
+                '<br/>' +
+                '<input type="checkbox" id="option2" ' + checkedAttribute2 + '/> <label for="option2">Option 2</label>' +
+                '</td>' +
+                '</tr').insertAfter($(this).closest("tr"));
+            $(this).parents("tr").find(".add, .edit").toggle();
+            $(".add-new").attr("disabled", "disabled");
+        });
+        // Delete row on delete button click
+        $(document).on("click", ".delete", function () {
+            const noteShortId = $(this).closest("tr").data("document").shortId;
+
+            if (!isNaN(parseInt(noteShortId))) {
+                var db = firebase.firestore();
+
+                db.collection("MasterNotes").where("shortId", "==", parseInt(noteShortId)).get()
+                    .then(function (result) {
+                        if (result.docs[0].id) {
+                            db.collection("MasterNotes").doc(result.docs[0].id).update({
+                                status: "delete"
+                            })
+                                .then(function () {
+                                    reloadNotes();
+                                })
+                                .catch(function (error) {
+                                    $('.table-wrapper').addClass('d-none');
+                                    $('.error').removeClass('d-none');
+                                    $('.error').html('<p class="alert alert-danger">Could not delete the record</p>');
+                                    console.error(error);
+                                });
+                        }
+                    })
+                    .catch(function (error) {
+                        $('.table-wrapper').addClass('d-none');
+                        $('.error').removeClass('d-none');
+                        $('.error').html('<p class="alert alert-danger">Could not find the record</p>');
+                        console.error(error);
+                    });
+            }
+
+            $(this).parents("tr").next('tr').remove();
+            $(this).parents("tr").remove();
+            $(".add-new").removeAttr("disabled");
+        });
+    });
+</script>
+</body>
+</html>                            

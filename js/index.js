@@ -1,10 +1,3 @@
-function showError(error) {
-    $('.table-wrapper').addClass('d-none');
-    $('.table-wrapper-2').closest('.container').addClass('d-none');
-    $('.error').removeClass('d-none');
-    $('.error').html('<p class="alert alert-danger">' + error + '</p>');
-}
-
 async function getOrCreateLastInsertId() {
     return new Promise(function(resolve) {
         var db = firebase.firestore();
@@ -21,7 +14,7 @@ async function getOrCreateLastInsertId() {
                 }
             })
             .catch(function(error) {
-                showError(error);
+                showMessage(error, 'alert-danger');
                 resolve(null);
             });
     })
@@ -34,75 +27,33 @@ async function getOrCreateLastInsertId() {
     }
 }
 
-/* async function reloadNotes() {
-    var id = await getOrCreateLastInsertId();
-
-    if (id) {
-        var masterNotesCollection = await db.collection("MasterNotes").get();
-
-        var loginUserClass = firebase.auth().currentUser ? '' : 'd-none';
-
-        var actions = '<a class="add" title="Add" data-toggle="tooltip"><i class="material-icons">&#xE03B;</i></a>' +
-            '<a class="edit ' + loginUserClass + '" title="Edit" data-toggle="tooltip"><i class="material-icons">&#xE254;</i></a>' +
-            '<a class="delete ' + loginUserClass + '" title="Delete" data-toggle="tooltip"><i class="material-icons">&#xE872;</i></a>';
-
-        $(".table-wrapper").removeClass("d-none");
-        $(".error").addClass("d-none");
-
-        $(".table-wrapper table tbody tr").remove();
-
-        for (var note of masterNotesCollection.docs) {
-            if (!note.data().status || note.data().status !== "delete") {
-                var index = $(".table-wrapper table tbody tr:last-child").index();
-                var row = $('<tr>' +
-                    '<td data-name="label">' + note.data().label + '</td>' +
-                    '<td data-name="note">' + note.data().note + '</td>' +
-                    '<td class="actions">' + actions + '</td></tr>' +
-                    '</tr');
-
-                row.data('document', note.data());
-
-                $(".table-wrapper table").append(row);
-                $('[data-toggle="tooltip"]').tooltip();
-            }
-        }
-
-        $('[data-toggle="tooltip"]').tooltip();
-    }
-} */
-
-function hasEmptyRows(highlight = false) {
-    var empty = false;
-
-    $('.table-wrapper table tbody tr input[type="text"]').each(function() {
-        if(!$(this).val()){
-            if (highlight) {
-                $(this).addClass("error");
-            }
-            empty = true;
-        } else{
-            if (highlight) {
-                $(this).removeClass("error");
-            }
-        }
-    });
-
-    return empty;
-}
-
 function disableArea($) {
     $('#save').attr("disabled", "disabled");
     $('.add-new').attr("disabled", "disabled");
     $('.master-note-title').addClass("disabled");
 
     $('.table-wrapper tbody tr').each(function() {
+        $(this).find("input").each(function () {
+            $(this).parent('td').html($(this).val());
+        });
+
         $(this).find('.add, .edit, .delete').addClass('disabled');
     });
+
+    $('#option1').attr("disabled", "disabled");
+    $('#option2').attr("disabled", "disabled");
+
+    $('.table-wrapper').addClass('blurred');
 }
 
 function enableArea($) {
     $('#save').removeAttr("disabled");
     $('.master-note-title').removeClass("disabled");
+
+    $('#option1').removeAttr("disabled");
+    $('#option2').removeAttr("disabled");
+
+    $('.table-wrapper').removeClass('blurred');
 }
 
 function showUrl(shortId) {
@@ -137,7 +88,7 @@ async function addNoteToUser(noteShortId) {
                     resolve(true);
                 })
                 .catch(function() {
-                    showError('Could not retreive last insert id');
+                    showMessage('Could not retreive last insert id', 'alert-danger');
                     resolve(false);
                 });
         } else {
@@ -161,10 +112,10 @@ async function addShortId(noteId) {
                     resolve();
                 })
                 .catch(function(error) {
-                    showError(error);
+                    showMessage(error, 'alert-danger');
                 });
         } else {
-            showError('Could not retreive last insert id');
+            showMessage('Could not retreive last insert id', 'alert-danger');
         }
     });
 }
@@ -181,16 +132,20 @@ async function increaseLastInsertId() {
                     resolve();
                 })
                 .catch(function(error) {
-                    showError(error);
+                    showMessage(error, 'alert-danger');
                 });
         } else {
-            showError('Could not retreive last insert id');
+            showMessage('Could not retreive last insert id', 'alert-danger');
         }
     });
 }
 
 function saveNote() {
-    var name = ($('.master-note-title-input').length === 1) ? $('.master-note-title-input').val() : $('.master-note-title').text();
+    var name = ($('.master-note-title-input').length === 1) ? $('.master-note-title-input').val() : $('.master-note-title span').text();
+
+    showLoader();
+
+    $('.master-note-title-input').blur();
 
     var now = new Date();
     var dateCreated = now.getUTCFullYear() + '-' + now.getUTCMonth() + '-' + now.getUTCDate() + ' ' + now.getUTCHours() + ':' + now.getUTCMinutes() + ':' + now.getUTCSeconds();
@@ -219,59 +174,39 @@ function saveNote() {
             }
         };
 
-        disableArea($);
-
         var db = firebase.firestore();
 
         db.collection("MasterNotes").add(document)
             .then(async function(result) {
                 await addShortId(result.id);
+                hideLoader();
+                disableArea($);
             })
             .catch(function(error){
-                showError(error);
+                hideLoader();
+                showMessage(error, 'alert-danger');
             });
     }
 }
 
-function escapeHtml(str) {
-    var div = document.createElement('div');
-    div.appendChild(document.createTextNode(str));
-    return div.innerHTML;
-}
-
 jQuery(document).ready(function ($) {
-    var firebaseConfig = {
-        apiKey: "AIzaSyBOthBwcREmRXm2OwHDoIQqbzdERufUowE",
-        authDomain: "user-notes-d5283.firebaseapp.com",
-        databaseURL: "https://user-notes-d5283.firebaseio.com",
-        projectId: "user-notes-d5283",
-        storageBucket: "user-notes-d5283.appspot.com",
-        messagingSenderId: "688290206555",
-        appId: "1:688290206555:web:5ecc4a6ba1a7c77d"
-    };
-
-    // Initialize Firebase
-    firebase.initializeApp(firebaseConfig);
-
     $('.nav').hide();
     $('.nav-login').hide();
 
-    firebase.auth().onAuthStateChanged(function (user) {
-        if (user) {
-            $('.nav').hide();
-            $('.nav-login').show();
-        } else {
-            $('.nav').show();
-            $('.nav-login').hide();
-        }
-    });
+    if (isUserLoggedIn()) {
+        $('.nav').hide();
+        $('.nav-login').show();
+    } else {
+        $('.nav').show();
+        $('.nav-login').hide();
+    }
 
     $(document).on('click', '.master-note-title', function(event) {
         if (!$(this).hasClass('disabled')) {
-            var value = $(this).text();
+            var value = $(this).find('span').text();
             var $input = $('<input type="text" value="' + value + '" class="master-note-title-input">');
             $input.on('blur', function() {
-                $(this).parent('div').html('<h2 class="master-note-title">' + $(this).val() + '</h2>');
+                $(this).parent('div').html('<h2 class="master-note-title d-flex"><span>' + $(this).val() + '</span><a class="edit ml-2" title="Edit" data-toggle="tooltip"><i class="material-icons">&#xE254;</i></a></h2>');
             });
             $input.focus();
 
@@ -298,6 +233,8 @@ jQuery(document).ready(function ($) {
         $(".table-wrapper table tbody tr").eq(index + 1).find(".edit").hide();
         $('[data-toggle="tooltip"]').tooltip();
     });
+
+    $('.add-new').click();
 
     $(document).on('click', '.add', function() {
         if ($(this).hasClass('disabled')) {
@@ -352,6 +289,10 @@ jQuery(document).ready(function ($) {
 
         $(this).parents("tr").remove();
         $(".add-new").removeAttr("disabled");
+
+        if ($('.table-wrapper tbody tr').length === 0) {
+            $('.add-new').click();
+        }
     });
 
     $('#save').click(function() {
@@ -368,65 +309,3 @@ jQuery(document).ready(function ($) {
     });
 });
 
-function googleLogin() {
-    const provider = new firebase.auth.GoogleAuthProvider();
-
-    firebase.auth().signInWithPopup(provider).then(function (result) {
-        createUserIfNotExist();
-        $('.nav').toggle();
-    })
-        .catch(function (error) {
-            $('.table-wrapper').addClass('d-none');
-            $('.error').removeClass('d-none');
-            $('.error').html('<p class="alert alert-danger">' + error.message + '</p>');
-            console.error(error);
-        });
-}
-
-function facebookLogin() {
-    var provider = new firebase.auth.FacebookAuthProvider();
-
-    firebase.auth().signInWithPopup(provider).then(function (result) {
-        createUserIfNotExist();
-        $('.nav').toggle();
-    }).catch(function (error) {
-        $('.table-wrapper').addClass('d-none');
-        $('.error').removeClass('d-none');
-        $('.error').html('<p class="alert alert-danger">' + error.message + '</p>');
-        console.error(error);
-    });
-}
-
-function logout() {
-    firebase.auth().signOut().then(function () {
-        $('.nav').show();
-        $('.nav-login').hide();
-    }, function (error) {
-        $('.table-wrapper').addClass('d-none');
-        $('.error').removeClass('d-none');
-        $('.error').html('<p class="alert alert-danger">Could not signed out</p>');
-        console.error(error);
-    });
-}
-
-function createUserIfNotExist() {
-    var db = firebase.firestore();
-
-    const email = firebase.auth().currentUser.email
-    const userProfileCollection = db.collection("UserProfile");
-    userProfileCollection.where("email", "==", email).get()
-        .then(function (result) {
-            if (result.docs.length === 0) {
-                userProfileCollection.add({
-                    email: email,
-                    notes: []
-                });
-            }
-        })
-        .catch(function (error) {
-            $('.table-wrapper').addClass('d-none');
-            $('.error').removeClass('d-none');
-            $('.error').html('<p class="alert alert-danger">Could not get the user</p>');
-            console.error(error);
-        });
-}

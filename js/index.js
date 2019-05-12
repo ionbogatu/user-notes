@@ -87,7 +87,7 @@ async function addNoteToUser(noteShortId) {
 
                     resolve(true);
                 })
-                .catch(function() {
+                .catch(function(error) {
                     showMessage('Could not retreive last insert id', 'alert-danger');
                     resolve(false);
                 });
@@ -97,6 +97,31 @@ async function addNoteToUser(noteShortId) {
     });
 }
 
+var alphanums = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z'];
+function convertToAlphaNum(number) {
+    if (number === 0) {
+        return "0";
+    }
+
+    digits = [];
+
+    while (number > 0) {
+        digits.splice(0, 0, alphanums[number % alphanums.length]);
+        if (
+            number >= alphanums.length &&
+            number < alphanums.length * 2
+        ) {
+            digits.splice(0, 0, "0");
+            number = number - alphanums.length;
+        } else if (number >= alphanums.length * 2) {
+            number = number - alphanums.length;
+        }
+        number = Math.trunc(number / alphanums.length);
+    }
+
+    return digits.join('');
+}
+
 async function addShortId(noteId) {
     return new Promise(async function(resolve) {
         var currentId = await getOrCreateLastInsertId();
@@ -104,10 +129,14 @@ async function addShortId(noteId) {
         if (currentId !== null) {
             var db = firebase.firestore();
 
-            db.collection("MasterNotes").doc(noteId).update({shortId: parseInt(currentId)})
+            debugger;
+
+            var currentId = convertToAlphaNum(currentId);
+
+            db.collection("MasterNotes").doc(noteId).update({shortId: currentId})
                 .then(async function() {
                     await increaseLastInsertId();
-                    await addNoteToUser(parseInt(currentId));
+                    await addNoteToUser(currentId);
                     showUrl(currentId);
                     resolve();
                 })
@@ -193,13 +222,15 @@ jQuery(document).ready(function ($) {
     $('.nav').hide();
     $('.nav-login').hide();
 
-    if (isUserLoggedIn()) {
-        $('.nav').hide();
-        $('.nav-login').show();
-    } else {
-        $('.nav').show();
-        $('.nav-login').hide();
-    }
+    firebase.auth().onAuthStateChanged(function (user) {
+        if (user) {
+            $('.nav').hide();
+            $('.nav-login').show();
+        } else {
+            $('.nav').show();
+            $('.nav-login').hide();
+        }
+    });
 
     $(document).on('click', '.master-note-title', function(event) {
         if (!$(this).hasClass('disabled')) {
@@ -308,4 +339,3 @@ jQuery(document).ready(function ($) {
         $('.add-new').click();
     });
 });
-

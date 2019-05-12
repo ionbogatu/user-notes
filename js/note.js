@@ -9,7 +9,7 @@ function reloadNotes() {
 
     var db = firebase.firestore();
 
-    db.collection("MasterNotes").where("shortId", "==", parseInt(noteShortId)).get()
+    db.collection("MasterNotes").where("shortId", "==", noteShortId).get()
         .then(function (result) {
             if (result.docs[0].id) {
                 var data = result.docs[0].data();
@@ -114,7 +114,7 @@ function updateStats() {
 
     var shortId = getShortId();
 
-    masterNotesCollection.where("shortId", "==", parseInt(shortId)).get()
+    masterNotesCollection.where("shortId", "==", shortId).get()
         .then(function (result) {
             if (result.docs[0].id) {
                 masterNotesCollection.doc(result.docs[0].id).update({
@@ -129,14 +129,14 @@ function updateStats() {
                 getLocationOrIP().then(function(result) {
                     if (typeof result === "string") { // ip
                         masterStatsCollection.add({
-                            shortId: parseInt(shortId),
+                            shortId: shortId,
                             date: dateCreated,
                             ip: result,
                             geo: null
                         });
                     } else { // coords or null
                         masterStatsCollection.add({
-                            shortId: parseInt(shortId),
+                            shortId: shortId,
                             date: dateCreated,
                             ip: null,
                             geo: result
@@ -176,8 +176,6 @@ function updateNote() {
             });
         });
 
-        debugger;
-
         var document = {
             name: escapeHtml(name),
             notes: notes,
@@ -191,7 +189,7 @@ function updateNote() {
 
         var shortId = getShortId();
 
-        db.collection("MasterNotes").where("shortId", "==", parseInt(shortId)).get()
+        db.collection("MasterNotes").where("shortId", "==", shortId).get()
             .then(function(result) {
                 if (result.docs.length === 1) {
                     db.collection("MasterNotes").doc(result.docs[0].id).update(document)

@@ -1,7 +1,3 @@
-function isUserLoggedIn() {
-	return localStorage.getItem('is_logged_in') === '1';
-}
-
 function googleLogin() {
     const provider = new firebase.auth.GoogleAuthProvider();
 
@@ -113,13 +109,3 @@ var firebaseConfig = {
 
 // Initialize Firebase
 firebase.initializeApp(firebaseConfig);
-
-firebase.auth().onAuthStateChanged(function(user) {
-	if (user) {
-		localStorage.setItem('is_logged_in', '1');
-	} else {
-		if (localStorage.getItem('is_logged_in')) {
-			localStorage.removeItem('is_logged_in');
-		}
-	}
-});

@@ -6,48 +6,54 @@ function showUrl(shortId) {
     return '<a href="' + getUrl(shortId) + '" target="_blank">' + getUrl(shortId); + '</a>';
 }
 
-function reloadNotes() {
-    var db = firebase.firestore();
+function reloadNotes(currentUser) {
+    var db = window.fb.firestore;
 
     $('.message').addClass('d-none');
     $('.message').html('');
     $('.table-wrapper .table tbody').html('');
 
-    var currentUser = firebase.auth().currentUser;
     if (currentUser) {
         showLoader();
 
         db.collection("UserProfile").where("email", "==", currentUser.email).get()
-        .then(async function(result) {
-            if (result.docs[0].data().notes.length > 0) {
-                for (var id of result.docs[0].data().notes) {
-                    var result = await db.collection("MasterNotes").where("shortId", "==", id).get();
-                    if (result.docs.length === 1) {
-                        var doc = result.docs[0];
+            .then(async function(result) {
 
-                        var actions = '<a class="edit" title="Edit" data-toggle="tooltip" targrt="_blank" href="' + getUrl(doc.data()['shortId']) + '"><i class="material-icons">&#xE254;</i></a>' +
-                        '<a class="delete" title="Delete" data-toggle="tooltip" data-id="' + doc.id + '" data-short-id="' + doc.data()['shortId'] + '"><i class="material-icons">&#xE872;</i></a>';
+                if (result.docs[0].data().notes.length > 0) {
+                    for (var id of result.docs[0].data().notes) {
+                        var result = await db.collection("MasterNotes").where("shortId", "==", id).get();
+                        if (result.docs.length === 1) {
+                            var doc = result.docs[0];
 
-                        $('.table-wrapper .table tbody').append('<tr><td>' + doc.data()['name'] + '</td><td>' + showUrl(doc.data()['shortId']) + '</td><td>' + actions + '</td></tr>');
+                            var actions = '<a class="edit" title="Edit" data-toggle="tooltip" targrt="_blank" href="' + getUrl(doc.data()['shortId']) + '"><i class="material-icons">&#xE254;</i></a>' +
+                            '<a class="delete" title="Delete" data-toggle="tooltip" data-id="' + doc.id + '" data-short-id="' + doc.data()['shortId'] + '"><i class="material-icons">&#xE872;</i></a>';
 
-                        $('[data-toggle="tooltip"]').tooltip();
+                            $('.table-wrapper .table tbody').append('<tr><td>' + doc.data()['name'] + '</td><td>' + showUrl(doc.data()['shortId']) + '</td><td>' + actions + '</td></tr>');
+
+                            $('[data-toggle="tooltip"]').tooltip();
+                        }
                     }
-                }
-            } else {
-                $('.table-wrapper .table tbody').html('<tr><td colspan="3" class="text-center">No data available</td></tr>');
-            }
 
-            hideLoader();
-        }).catch(function(error) {
-            console.log(error);
-            showMessage('Could not get notes', 'alert-danger');
-            hideLoader();
-        });
+                    if ($('.table-wrapper tbody tr').length === 0) {
+                        $('.table-wrapper .table tbody').html('<tr><td colspan="3" class="text-center alert-success">No data available</td></tr>');
+                    }
+                } else if ($('.table-wrapper tbody tr').length === 0) {
+                    $('.table-wrapper .table tbody').html('<tr><td colspan="3" class="text-center alert-success">No data available</td></tr>');
+                }
+
+                hideLoader();
+            }).catch(function(error) {
+                console.log(error);
+                showMessage('Could not get notes', 'alert-danger');
+                hideLoader();
+            });
+    } else {
+        $('.table-wrapper .table tbody').html('<tr><td colspan="3" class="text-center">Please login</td></tr>');
     }
 }
 
 function deleteNote(e) {
-    var db = firebase.firestore();
+    var db = window.fb.firestore;
 
     showLoader();
 
@@ -59,7 +65,7 @@ function deleteNote(e) {
             $(e.target).closest('tr').remove();
 
             if ($('.table-wrapper tbody tr').length === 0) {
-                $('.table-wrapper tbody').html('<tr><td colspan="3" class="text-center">No data available</td></tr>');
+                $('.table-wrapper tbody').html('<tr><td colspan="3" class="text-center alert-success">No data available</td></tr>');
             }
 
             db.collection('UserProfile').get().then(async function(result) {
@@ -80,13 +86,14 @@ function deleteNote(e) {
             });
         })
         .catch(function(error) {
-            showError(error);
+            console.log(error);
+            showMessage(error);
             hideLoader();
         });
 }
 
 jQuery(document).ready(function() {
-    firebase.auth().onAuthStateChanged(function (user) {
+    window.fb.auth.onAuthStateChanged(async function (user) {
         if (user) {
             $('.nav').hide();
             $('.nav-login').show();
@@ -95,7 +102,7 @@ jQuery(document).ready(function() {
             $('.nav-login').hide();
         }
 
-        reloadNotes();
+        reloadNotes(user);
     });
     
     $('.add-new').on('click', function() {

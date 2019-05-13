@@ -1,6 +1,6 @@
 async function getOrCreateLastInsertId() {
     return new Promise(function(resolve) {
-        var db = firebase.firestore();
+        var db = window.fb.firestore;
 
         db.collection("Settings").doc("lastInsertId").get()
             .then(function(result) {
@@ -10,10 +10,11 @@ async function getOrCreateLastInsertId() {
                             resolve(0);
                         });
                 } else {
-                    resolve(result.data().value)
+                    resolve(result.data().value);
                 }
             })
             .catch(function(error) {
+                console.log(error);
                 showMessage(error, 'alert-danger');
                 resolve(null);
             });
@@ -70,10 +71,10 @@ function showUrl(shortId) {
 
 async function addNoteToUser(noteShortId) {
     return new Promise(function(resolve) {
-        if (firebase.auth().currentUser) {
-            var db = firebase.firestore();
+        if (window.fb.auth.currentUser) {
+            var db = window.fb.firestore;
 
-            db.collection("UserProfile").where("email", "==", firebase.auth().currentUser.email).get()
+            db.collection("UserProfile").where("email", "==", window.fb.auth.currentUser.email).get()
                 .then(function(result) {
                     var notes = result.docs[0].data().notes;
 
@@ -82,12 +83,13 @@ async function addNoteToUser(noteShortId) {
 
                         db.collection("UserProfile").doc(result.docs[0].id).update({
                             notes: notes
-                        })
+                        });
                     }
 
                     resolve(true);
                 })
                 .catch(function(error) {
+                    console.log(error);
                     showMessage('Could not retreive last insert id', 'alert-danger');
                     resolve(false);
                 });
@@ -127,9 +129,7 @@ async function addShortId(noteId) {
         var currentId = await getOrCreateLastInsertId();
 
         if (currentId !== null) {
-            var db = firebase.firestore();
-
-            debugger;
+            var db = window.fb.firestore;
 
             var currentId = convertToAlphaNum(currentId);
 
@@ -141,10 +141,11 @@ async function addShortId(noteId) {
                     resolve();
                 })
                 .catch(function(error) {
+                    console.log(error);
                     showMessage(error, 'alert-danger');
                 });
         } else {
-            showMessage('Could not retreive last insert id', 'alert-danger');
+            showMessage('[Add short id]: Could not retreive last insert id', 'alert-danger');
         }
     });
 }
@@ -154,17 +155,18 @@ async function increaseLastInsertId() {
         var currentId = await getOrCreateLastInsertId();
 
         if (currentId !== null) {
-            var db = firebase.firestore();
+            var db = window.fb.firestore;
 
             db.collection("Settings").doc("lastInsertId").set({value: parseInt(currentId) + 1})
                 .then(function() {
                     resolve();
                 })
                 .catch(function(error) {
+                    console.log(error);
                     showMessage(error, 'alert-danger');
                 });
         } else {
-            showMessage('Could not retreive last insert id', 'alert-danger');
+            showMessage('[Increase Last Insert Id]: Could not retreive last insert id', 'alert-danger');
         }
     });
 }
@@ -179,7 +181,7 @@ function saveNote() {
     var now = new Date();
     var dateCreated = now.getUTCFullYear() + '-' + now.getUTCMonth() + '-' + now.getUTCDate() + ' ' + now.getUTCHours() + ':' + now.getUTCMinutes() + ':' + now.getUTCSeconds();
 
-    notes = [];
+    var notes = [];
 
     if ($('.table-wrapper table tbody tr').length > 0) {
         $('.table-wrapper table tbody tr').each(function() {
@@ -203,7 +205,7 @@ function saveNote() {
             }
         };
 
-        var db = firebase.firestore();
+        var db = window.fb.firestore;
 
         db.collection("MasterNotes").add(document)
             .then(async function(result) {
@@ -212,17 +214,27 @@ function saveNote() {
                 disableArea($);
             })
             .catch(function(error){
+                console.log(error);
                 hideLoader();
                 showMessage(error, 'alert-danger');
             });
     }
 }
 
+function clearForm() {
+    var $ = jQuery;
+
+    $('.master-note-title span').text('Sample Note');
+
+    $('#option1').removeAttr("checked");
+    $('#option2').removeAttr("checked");
+}
+
 jQuery(document).ready(function ($) {
     $('.nav').hide();
     $('.nav-login').hide();
 
-    firebase.auth().onAuthStateChanged(function (user) {
+    window.fb.auth.onAuthStateChanged(async function (user) {
         if (user) {
             $('.nav').hide();
             $('.nav-login').show();
@@ -285,7 +297,7 @@ jQuery(document).ready(function ($) {
         $(this).parents("tr").find(".error").first().focus();
         if (!empty) {
             $(this).parents("tr").find("td:not(:last-child)").each(function () {
-                $(this).attr('data-name', $(this).find('input').attr('name'))
+                $(this).attr('data-name', $(this).find('input').attr('name'));
                 $(this).html($(this).find('input').val());
             });
 
@@ -303,7 +315,7 @@ jQuery(document).ready(function ($) {
             return false;
         }
 
-        var inputs = $(this).closest('tr').find("td:not(:last-child)").each(function() {
+        $(this).closest('tr').find("td:not(:last-child)").each(function() {
             $(this).html('<input type="text" class="form-control" name="' + $(this).attr('data-name') + '" value="' + $(this).text() + '">');
         });
 
@@ -336,6 +348,7 @@ jQuery(document).ready(function ($) {
         $('.table-wrapper-2').parent('.container').addClass('d-none');
         $('.table-wrapper tbody').html('');
         enableArea($);
+        clearForm();
         $('.add-new').click();
     });
 });

@@ -5,64 +5,89 @@ function getShortId() {
 }
 
 function reloadNotes() {
-    var noteShortId = getShortId();
+    return new Promise(function(resolve) {
+        var noteShortId = getShortId();
 
-    var db = firebase.firestore();
+        var db = window.fb.firestore;
 
-    db.collection("MasterNotes").where("shortId", "==", noteShortId).get()
-        .then(function (result) {
-            if (result.docs[0].id) {
-                var data = result.docs[0].data();
+        db.collection("MasterNotes").where("shortId", "==", noteShortId).get()
+            .then(async function (result) {
+                if (result.docs.length > 0 && result.docs[0].id) {
+                    var data = result.docs[0].data();
 
-                if (data.status === "delete") {
-                    showMessage('The record was deleted', 'alert-danger')
-                } else {
-                    $('.master-note-title span').text(data.name);
-
-                    $notes = $('.table-bordered tbody');
-                    $notes.html('');
-
-                    var actions = '<a class="add" title="Add" data-toggle="tooltip"><i class="material-icons">&#xE03B;</i></a>' +
-                        '<a class="edit" title="Edit" data-toggle="tooltip"><i class="material-icons">&#xE254;</i></a>' +
-                        '<a class="delete" title="Delete" data-toggle="tooltip"><i class="material-icons">&#xE872;</i></a>';
-
-                    for (var note of data.notes) {
-                        $notes.append('<tr>' +
-                            '<td data-name="label">' + note.label + '</td>' +
-                            '<td data-name="note">' + note.note + '</td>' +
-                            '<td class="logged-in d-none">' + actions + '</td>' +
-                            '</tr>')
-                    }
-
-                    if (data.options.op1) {
-                        $('#option1').attr('checked', 'checked');
-                    }
-
-                    if (data.options.op2) {
-                        $('#option2').attr('checked', 'checked');
-                    }
-
-                    if (firebase.auth().currentUser) {
-                        $('#update').removeClass('d-none');
-                        $('#option1').removeAttr("disabled");
-                        $('#option2').removeAttr("disabled");
-                        $('.logged-in').each(function() {
-                            $(this).removeClass('d-none');
-                        });
+                    if (data.status === "delete") {
+                        showMessage('[Reload Notes] The record was deleted', 'alert-danger');
                     } else {
-                        $('#update').addClass('d-none');
-                        $('#option1').attr("disabled", "disabled");
-                        $('#option2').attr("disabled", "disabled");
-                        $('.logged-in').each(function() {
-                            $(this).addClass('d-none');
-                        });
+                        $('.master-note-title span').text(data.name);
+
+                        $notes = $('.table-bordered tbody');
+                        $notes.html('');
+
+                        var actions = '<a class="add" title="Add" data-toggle="tooltip"><i class="material-icons">&#xE03B;</i></a>' +
+                            '<a class="edit" title="Edit" data-toggle="tooltip"><i class="material-icons">&#xE254;</i></a>' +
+                            '<a class="delete" title="Delete" data-toggle="tooltip"><i class="material-icons">&#xE872;</i></a>';
+
+                        for (var note of data.notes) {
+                            $notes.append('<tr>' +
+                                '<td data-name="label">' + note.label + '</td>' +
+                                '<td data-name="note">' + note.note + '</td>' +
+                                '<td class="logged-in d-none">' + actions + '</td>' +
+                                '</tr>');
+                        }
+
+                        if (data.options.op1) {
+                            $('#option1').attr('checked', 'checked');
+                        }
+
+                        if (data.options.op2) {
+                            $('#option2').attr('checked', 'checked');
+                        }
+
+                        var hasAccess = false;
+
+                        if (localStorage.getItem('user_id')) {
+                            var user = await window.fb.firestore.collection('UserProfile').get(localStorage.getItem('user_id'));
+
+                            if (user) {
+                                hasAccess = user.data().notes.indexOf(noteShortId) > -1;
+                            }
+                        }
+
+                        if (
+                            window.fb.auth.currentUser &&
+                            hasAccess
+                        ) {
+                            $('#update').removeClass('d-none');
+                            $('#option1').removeAttr("disabled");
+                            $('#option2').removeAttr("disabled");
+                            $('#option1').closest('.form-check').removeClass('d-none');
+                            $('#option2').closest('.form-check').removeClass('d-none');
+                            $('.logged-in').each(function() {
+                                $(this).removeClass('d-none');
+                            });
+                        } else {
+                            $('#update').addClass('d-none');
+                            $('#option1').attr("disabled", "disabled");
+                            $('#option2').attr("disabled", "disabled");
+                            $('#option1').closest('.form-check').addClass('d-none');
+                            $('#option2').closest('.form-check').addClass('d-none');
+                            $('.logged-in').each(function() {
+                                $(this).addClass('d-none');
+                            });
+                        }
                     }
+
+                    resolve(true);
+                } else {
+                    showMessage('[Reload Notes] Record does not exist', 'alert-danger');
+                    resolve(false);
                 }
-            }
-        })
-        .catch(function (error) {
-            showMessage('Record does not exist', 'alert-danger');
-        });
+            })
+            .catch(function (error) {
+                console.log(error);
+                resolve(false);
+            });
+    });    
 }
 
 function getLocationOrIP() {
@@ -106,48 +131,57 @@ function getLocationOrIP() {
     });
 } 
 
-function updateStats() {
-    var db = firebase.firestore();
+async function updateStats() {
+    return new Promise(function(resolve) {
+        var db = window.fb.firestore;
 
-    var masterNotesCollection = db.collection("MasterNotes");
-    var masterStatsCollection = db.collection("MasterStats");
+        var masterNotesCollection = db.collection("MasterNotes");
+        var masterStatsCollection = db.collection("MasterStats");
 
-    var shortId = getShortId();
+        var shortId = getShortId();
 
-    masterNotesCollection.where("shortId", "==", shortId).get()
-        .then(function (result) {
-            if (result.docs[0].id) {
-                masterNotesCollection.doc(result.docs[0].id).update({
-                    totalVisits: result.docs[0].data().totalVisits + 1
-                }).catch(function (error) {
-                    showMessage('Could not update total visits', 'alert-danger')
-                });
+        masterNotesCollection.where("shortId", "==", shortId).get()
+            .then(function (result) {
+                if (result.docs.length > 0 && result.docs[0].id) {
+                    masterNotesCollection.doc(result.docs[0].id).update({
+                        totalVisits: result.docs[0].data().totalVisits + 1
+                    }).catch(function (error) {
+                        showMessage('Could not update total visits', 'alert-danger')
+                    });
 
-                const now = new Date();
-                var dateCreated = now.getUTCFullYear() + '-' + now.getUTCMonth() + '-' + now.getUTCDate() + ' ' + now.getUTCHours() + ':' + now.getUTCMinutes() + ':' + now.getUTCSeconds();
+                    const now = new Date();
+                    var dateCreated = now.getUTCFullYear() + '-' + now.getUTCMonth() + '-' + now.getUTCDate() + ' ' + now.getUTCHours() + ':' + now.getUTCMinutes() + ':' + now.getUTCSeconds();
 
-                getLocationOrIP().then(function(result) {
-                    if (typeof result === "string") { // ip
-                        masterStatsCollection.add({
-                            shortId: shortId,
-                            date: dateCreated,
-                            ip: result,
-                            geo: null
-                        });
-                    } else { // coords or null
-                        masterStatsCollection.add({
-                            shortId: shortId,
-                            date: dateCreated,
-                            ip: null,
-                            geo: result
-                        });
-                    }
-                });
-            }
-        })
-        .catch(function (error) {
-            showMessage('Could not get the note', 'alert-danger');
-        });
+                    getLocationOrIP().then(async function(result) {
+                        if (typeof result === "string") { // ip
+                            await masterStatsCollection.add({
+                                shortId: shortId,
+                                date: dateCreated,
+                                ip: result,
+                                geo: null
+                            });
+                        } else { // coords or null
+                            await masterStatsCollection.add({
+                                shortId: shortId,
+                                date: dateCreated,
+                                ip: null,
+                                geo: result
+                            });
+                        }
+
+                        resolve(true);
+                    });
+                } else {
+                    showMessage('[Update Stats] Could not get the note', 'alert-danger');
+                    resolve(true);
+                }
+            })
+            .catch(function (error) {
+                console.log(error);
+                showMessage('Could not get the note', 'alert-danger');
+                resolve(false);
+            });
+    })
 } 
 
 function updateNote() {
@@ -185,7 +219,7 @@ function updateNote() {
             }
         };
 
-        var db = firebase.firestore();
+        var db = window.fb.firestore;
 
         var shortId = getShortId();
 
@@ -203,33 +237,66 @@ function updateNote() {
                 hideLoader();
             })
             .catch(function(error){
+                console.log(error);
                 hideLoader();
                 showMessage(error, 'alert-danger');
             });
     }
 }
 
+async function init() {
+    var $ = jQuery;
+
+    showLoader();
+
+    await updateStats();
+
+    await reloadNotes();
+
+    hideLoader();
+}
+
 jQuery(document).ready(function ($) {
-    updateStats();
+    init();
 
-    reloadNotes();
-
-    firebase.auth().onAuthStateChanged(function (user) {
+    window.fb.auth.onAuthStateChanged(async function (user) {
         if (user) {
+            await window.fb.firestore.collection("UserProfile").where('email', '==', window.fb.auth.currentUser.email).get()
+                .then(function(result) {
+                    if (result.docs.length === 1) {
+                        localStorage.setItem('user_id', result.docs[0].id);
+                    }
+                }).catch(function(error) {
+                    console.log(error);
+                });
+
             $('.nav').hide();
             $('.nav-login').show();
-            $('.master-note-title .edit').removeClass('d-none');
+            $('.master-note-title .edit, .add-new').removeClass('d-none');
+            $('#option1').closest('.form-check').removeClass('d-none');
+            $('#option2').closest('.form-check').removeClass('d-none');
+
+            hideMessage();
         } else {
+            localStorage.removeItem('user_id');
             $('.nav').show();
             $('.nav-login').hide();
-            $('.master-note-title .edit').addClass('d-none');
+            $('.master-note-title .edit, .add-new').addClass('d-none');
+            $('#option1').closest('.form-check').addClass('d-none');
+            $('#option2').closest('.form-check').addClass('d-none');
+
+            showMessage('You cannot edit this note', 'alert-success');
         }
 
-        reloadNotes();
+        showLoader();
+
+        await reloadNotes();
+
+        hideLoader();
     });
 
     $(document).on('click', '.master-note-title', function(event) {
-        if (firebase.auth().currentUser) {
+        if (window.fb.auth.currentUser) {
             var value = $(this).find('span').text();
             var $input = $('<input type="text" value="' + value + '" class="master-note-title-input">');
             $input.on('blur', function() {

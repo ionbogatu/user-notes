@@ -1,46 +1,48 @@
 function googleLogin() {
     const provider = new firebase.auth.GoogleAuthProvider();
 
-    firebase.auth().signInWithPopup(provider).then(function (result) {
+    window.fb.auth.signInWithPopup(provider).then(async function (result) {
         createUserIfNotExist();
         $('.nav').toggle();
-    }).catch(function() {
-    	
+    }).catch(function(error) {
+    	console.log(error);
     });
 }
 
 function facebookLogin() {
     var provider = new firebase.auth.FacebookAuthProvider();
 
-    firebase.auth().signInWithPopup(provider).then(function (result) {
+    window.fb.auth.signInWithPopup(provider).then(function (result) {
         createUserIfNotExist();
         $('.nav').toggle();
-    }).catch(function() {
-
+    }).catch(function(error) {
+        console.log(error);
     });
 }
 
 function logout() {
-    firebase.auth().signOut().then(function () {
+    window.fb.auth.signOut().then(function () {
         $('.nav').show();
         $('.nav-login').hide();
-    }, function () {
-
+    }, function (error) {
+        console.log(error);
     });
 }
 
 function createUserIfNotExist() {
-    var db = firebase.firestore();
+    var db = window.fb.firestore;
 
-    const email = firebase.auth().currentUser.email
+    const email = window.fb.auth.currentUser.email;
     const userProfileCollection = db.collection("UserProfile");
     userProfileCollection.where("email", "==", email).get()
-        .then(function (result) {
+        .then(async function (result) {
             if (result.docs.length === 0) {
-                userProfileCollection.add({
+                await userProfileCollection.add({
                     email: email,
                     notes: []
                 });
+
+                window.location.reload();
             }
         })
         .catch(function (error) {
@@ -68,6 +70,17 @@ function showMessage(message, alertClass) {
 
     $('.message').removeClass('d-none');
     $('.message').html('<p class="alert ' + alertClass + '">' + message + '</p>');
+}
+
+function hideMessage() {
+    $('.table-wrapper').removeClass('d-none');
+
+    if ($('.table-wrapper-2').length === 1) {
+        $('.table-wrapper-2').closest('.container').removeClass('d-none');
+    }
+
+    $('.message').addClass('d-none');
+    $('.message').html('');
 }
 
 function hasEmptyRows(highlight = false) {
@@ -109,3 +122,14 @@ var firebaseConfig = {
 
 // Initialize Firebase
 firebase.initializeApp(firebaseConfig);
+
+window.fb = {};
+
+window.fb.firestore = firebase.firestore();
+window.fb.auth = firebase.auth();
+
+window.i18n = {
+    en: {
+
+    }
+};

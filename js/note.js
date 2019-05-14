@@ -35,13 +35,13 @@ function reloadNotes() {
                                 '</tr>');
                         }
 
-                        /*if (data.options.op1) {
+                        if (data.options.op1) {
                             $('#option1').attr('checked', 'checked');
                         }
 
                         if (data.options.op2) {
                             $('#option2').attr('checked', 'checked');
-                        }*/
+                        }
 
                         var hasAccess = false;
 
@@ -60,17 +60,14 @@ function reloadNotes() {
                             $('#update').removeClass('d-none');
                             $('#option1').removeAttr("disabled");
                             $('#option2').removeAttr("disabled");
-                            $('#option1').closest('.form-check').removeClass('d-none');
-                            $('#option2').closest('.form-check').removeClass('d-none');
                             $('.logged-in').each(function() {
                                 $(this).removeClass('d-none');
                             });
                         } else {
+                            $('.table-wrapper').removeClass('d-none');
                             $('#update').addClass('d-none');
                             $('#option1').attr("disabled", "disabled");
                             $('#option2').attr("disabled", "disabled");
-                            $('#option1').closest('.form-check').addClass('d-none');
-                            $('#option2').closest('.form-check').addClass('d-none');
                             $('.logged-in').each(function() {
                                 $(this).addClass('d-none');
                             });

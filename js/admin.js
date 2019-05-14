@@ -73,14 +73,15 @@ function deleteNote(e) {
             $(e.target).closest('tr').remove();
 
             if ($('.table-wrapper tbody tr').length === 0) {
-                $('.table-wrapper tbody').html('<tr><td colspan="3" class="text-center alert-success">' + window.i18n['en']['no-data-available'] + '</td></tr>');
+                $('.table-wrapper').addClass('d-none');
+                showMessage(window.i18n['en']['no-data-available'], 'alert-success');
             }
 
-            const userId = localStorage.getItem('user_id');
+            const userEmail = localStorage.getItem('user_email');
 
-            if (userId) {
-                db.collection('UserProfile').doc(userId).get().then(async function(result) {
-                    for (var doc of result.docs) {
+            if (userEmail) {
+                db.collection('UserProfile').where("email", "==", userEmail).get().then(async function(result) {
+                    if (result.docs.length === 1) {
                         var indexOfNote = result.docs[0].data().notes.indexOf(shortId);
                         if (indexOfNote > -1) {
                             var notes = result.docs[0].data().notes;
@@ -90,9 +91,12 @@ function deleteNote(e) {
                                 notes: notes
                             });
                         }
+
+                        showMessage(window.i18n['en']['note-deleted'], 'alert-success');
+                    } else {
+                        showMessage(window.i18n['en']['could-not-get-user'], 'alert-danger');
                     }
 
-                    showMessage(window.i18n['en']['note-deleted'], 'alert-success');
                     hideLoader();
                 });
             }
@@ -109,11 +113,11 @@ jQuery(document).ready(function() {
         if (user) {
             $('.nav').hide();
             $('.nav-login').show();
-            localStorage.setItem('user_id', user.id);
+            localStorage.setItem('user_email', user.email);
         } else {
             $('.nav').show();
             $('.nav-login').hide();
-            localStorage.removeItem('user_id');
+            localStorage.removeItem('user_email');
         }
 
         reloadNotes(user);

@@ -48,7 +48,7 @@ function createUserIfNotExist() {
         .catch(function (error) {
             $('.table-wrapper').addClass('d-none');
             $('.error').removeClass('d-none');
-            $('.error').html('<p class="alert alert-danger">Could not get the user</p>');
+            $('.error').html('<p class="alert alert-danger">' + window.i18n['en']['could-not-get-user'] + '</p>');
             console.error(error);
         });
 }
@@ -69,7 +69,7 @@ function showMessage(message, alertClass) {
     }
 
     $('.message').removeClass('d-none');
-    $('.message').html('<p class="alert ' + alertClass + '">' + message + '</p>');
+    $('.message').html('<p class="text-center alert ' + alertClass + '">' + message + '</p>');
 }
 
 function hideMessage() {
@@ -130,6 +130,22 @@ window.fb.auth = firebase.auth();
 
 window.i18n = {
     en: {
-
+        "could-not-get-user": "Could not get the user",
+        "could-not-get-notes": "Could not get notes",
+        "add": "Add",
+        "edit": "Edit",
+        "delete": "Delete",
+        "no-data-available": "No data available",
+        "please-login": "Please login",
+        "note-deleted": "Note deleted",
+        "your-link-is": "Your link is",
+        "could-not-retreive-last-insert-id": "Could not retreive last insert id",
+        "sample-note": "Sample Note",
+        "the-record-was-deleted": "The record was deleted",
+        "record-does-not-exist": 'Record does not exist',
+        "could-not-update-total-visits": "Could not update total visits",
+        "could-not-get-the-note": "Could not get the note",
+        "note-saved": "Note saved",
+        "could-not-find-the-note-to-update": "Could not find the note to update"
     }
 };

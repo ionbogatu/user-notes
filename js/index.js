@@ -63,7 +63,7 @@ function showUrl(shortId) {
     $('.table-wrapper-2').parent('.container').removeClass('d-none');
 
     $('#url').html(
-        '<a href="' + window.location.href.replace(/index\.html/, '') + shortId + '" target="_blank"> Your link is: ' +
+        '<a href="' + window.location.href.replace(/index\.html/, '') + shortId + '" target="_blank"> ' + window.i18n['en']['your-link-is'] + ': ' +
             (window.location.href.replace(/index\.html/, '') + shortId) +
         '</a>'
     );
@@ -90,7 +90,7 @@ async function addNoteToUser(noteShortId) {
                 })
                 .catch(function(error) {
                     console.log(error);
-                    showMessage('Could not retreive last insert id', 'alert-danger');
+                    showMessage(window.i18n['en']['could-not-retreive-last-insert-id'], 'alert-danger');
                     resolve(false);
                 });
         } else {
@@ -145,7 +145,7 @@ async function addShortId(noteId) {
                     showMessage(error, 'alert-danger');
                 });
         } else {
-            showMessage('[Add short id]: Could not retreive last insert id', 'alert-danger');
+            showMessage(window.i18n['en']['could-not-retreive-last-insert-id'], 'alert-danger');
         }
     });
 }
@@ -166,7 +166,7 @@ async function increaseLastInsertId() {
                     showMessage(error, 'alert-danger');
                 });
         } else {
-            showMessage('[Increase Last Insert Id]: Could not retreive last insert id', 'alert-danger');
+            showMessage(window.i18n['en']['could-not-retreive-last-insert-id'], 'alert-danger');
         }
     });
 }
@@ -224,7 +224,7 @@ function saveNote() {
 function clearForm() {
     var $ = jQuery;
 
-    $('.master-note-title span').text('Sample Note');
+    $('.master-note-title span').text(window.i18n['en']['sample-note']);
 
     $('#option1').removeAttr("checked");
     $('#option2').removeAttr("checked");
@@ -249,7 +249,7 @@ jQuery(document).ready(function ($) {
             var value = $(this).find('span').text();
             var $input = $('<input type="text" value="' + value + '" class="master-note-title-input">');
             $input.on('blur', function() {
-                $(this).parent('div').html('<h2 class="master-note-title d-flex"><span>' + $(this).val() + '</span><a class="edit ml-2" title="Edit" data-toggle="tooltip"><i class="material-icons">&#xE254;</i></a></h2>');
+                $(this).parent('div').html('<h2 class="master-note-title d-flex"><span>' + $(this).val() + '</span><a class="edit ml-2" title="' + window.i18n['en']['edit'] + '" data-toggle="tooltip"><i class="material-icons">&#xE254;</i></a></h2>');
             });
             $input.focus();
 
@@ -260,9 +260,9 @@ jQuery(document).ready(function ($) {
 
     // Append table with add row form on add new button click
     $(".add-new").on('click', function () {
-        var actions = '<a class="add" title="Add" data-toggle="tooltip"><i class="material-icons">&#xE03B;</i></a>' +
-            '<a class="edit" title="Edit" data-toggle="tooltip"><i class="material-icons">&#xE254;</i></a>' +
-            '<a class="delete" title="Delete" data-toggle="tooltip"><i class="material-icons">&#xE872;</i></a>';
+        var actions = '<a class="add" title="' + window.i18n['en']['add'] + '" data-toggle="tooltip"><i class="material-icons">&#xE03B;</i></a>' +
+            '<a class="edit" title="' + window.i18n['en']['edit'] + '" data-toggle="tooltip"><i class="material-icons">&#xE254;</i></a>' +
+            '<a class="delete" title="' + window.i18n['en']['delete'] + '" data-toggle="tooltip"><i class="material-icons">&#xE872;</i></a>';
 
         $(this).attr("disabled", "disabled");
         var index = $(".table-wrapper table tbody tr:last-child").index();

@@ -104,6 +104,10 @@ table.table td .add {
     display: none !important;
 }
 
+.logged-in.d-none {
+    display: none !important;
+}
+
 .d-flex {
     display: flex !important;
 }

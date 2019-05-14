@@ -16,16 +16,16 @@ function reloadNotes() {
                     var data = result.docs[0].data();
 
                     if (data.status === "delete") {
-                        showMessage('[Reload Notes] The record was deleted', 'alert-danger');
+                        showMessage(window.i18n['en']['the-record-was-deleted'], 'alert-danger');
                     } else {
                         $('.master-note-title span').text(data.name);
 
                         $notes = $('.table-bordered tbody');
                         $notes.html('');
 
-                        var actions = '<a class="add" title="Add" data-toggle="tooltip"><i class="material-icons">&#xE03B;</i></a>' +
-                            '<a class="edit" title="Edit" data-toggle="tooltip"><i class="material-icons">&#xE254;</i></a>' +
-                            '<a class="delete" title="Delete" data-toggle="tooltip"><i class="material-icons">&#xE872;</i></a>';
+                        var actions = '<a class="add" title="' + window.i18n['en']['add'] + '" data-toggle="tooltip"><i class="material-icons">&#xE03B;</i></a>' +
+                            '<a class="edit" title="' + window.i18n['en']['edit'] + '" data-toggle="tooltip"><i class="material-icons">&#xE254;</i></a>' +
+                            '<a class="delete" title="' + window.i18n['en']['delete'] + '" data-toggle="tooltip"><i class="material-icons">&#xE872;</i></a>';
 
                         for (var note of data.notes) {
                             $notes.append('<tr>' +
@@ -35,18 +35,18 @@ function reloadNotes() {
                                 '</tr>');
                         }
 
-                        if (data.options.op1) {
+                        /*if (data.options.op1) {
                             $('#option1').attr('checked', 'checked');
                         }
 
                         if (data.options.op2) {
                             $('#option2').attr('checked', 'checked');
-                        }
+                        }*/
 
                         var hasAccess = false;
 
                         if (localStorage.getItem('user_id')) {
-                            var user = await window.fb.firestore.collection('UserProfile').get(localStorage.getItem('user_id'));
+                            var user = await window.fb.firestore.collection('UserProfile').doc(localStorage.getItem('user_id')).get();
 
                             if (user) {
                                 hasAccess = user.data().notes.indexOf(noteShortId) > -1;
@@ -79,7 +79,7 @@ function reloadNotes() {
 
                     resolve(true);
                 } else {
-                    showMessage('[Reload Notes] Record does not exist', 'alert-danger');
+                    showMessage(window.i18n['en']['record-does-not-exist'], 'alert-danger');
                     resolve(false);
                 }
             })
@@ -146,7 +146,7 @@ async function updateStats() {
                     masterNotesCollection.doc(result.docs[0].id).update({
                         totalVisits: result.docs[0].data().totalVisits + 1
                     }).catch(function (error) {
-                        showMessage('Could not update total visits', 'alert-danger')
+                        showMessage(window.i18n['en']['could-not-update-total-visits'], 'alert-danger')
                     });
 
                     const now = new Date();
@@ -172,13 +172,13 @@ async function updateStats() {
                         resolve(true);
                     });
                 } else {
-                    showMessage('[Update Stats] Could not get the note', 'alert-danger');
+                    showMessage(window.i18n['en']['could-not-get-the-note'], 'alert-danger');
                     resolve(true);
                 }
             })
             .catch(function (error) {
                 console.log(error);
-                showMessage('Could not get the note', 'alert-danger');
+                showMessage(window.i18n['en']['could-not-get-the-note'], 'alert-danger');
                 resolve(false);
             });
     })
@@ -228,10 +228,10 @@ function updateNote() {
                 if (result.docs.length === 1) {
                     db.collection("MasterNotes").doc(result.docs[0].id).update(document)
                         .then(function(result) {
-                            showMessage('Note saved', 'alert-success');
+                            showMessage(window.i18n['en']['note-saved'], 'alert-success');
                         })
                 } else {
-                    showMessage('Could not find the note to update', 'alert-danger');
+                    showMessage(window.i18n['en']['could-not-find-the-note-to-update'], 'alert-danger');
                 }
 
                 hideLoader();
@@ -251,12 +251,13 @@ async function init() {
 
     await updateStats();
 
-    await reloadNotes();
+    // await reloadNotes();
 
     hideLoader();
 }
 
 jQuery(document).ready(function ($) {
+
     init();
 
     window.fb.auth.onAuthStateChanged(async function (user) {
@@ -272,20 +273,18 @@ jQuery(document).ready(function ($) {
 
             $('.nav').hide();
             $('.nav-login').show();
-            $('.master-note-title .edit, .add-new').removeClass('d-none');
-            $('#option1').closest('.form-check').removeClass('d-none');
-            $('#option2').closest('.form-check').removeClass('d-none');
+            // $('.master-note-title .edit, .add-new').removeClass('d-none');
+            // $('#option1').closest('.form-check').removeClass('d-none');
+            // $('#option2').closest('.form-check').removeClass('d-none');
 
             hideMessage();
         } else {
             localStorage.removeItem('user_id');
             $('.nav').show();
             $('.nav-login').hide();
-            $('.master-note-title .edit, .add-new').addClass('d-none');
-            $('#option1').closest('.form-check').addClass('d-none');
-            $('#option2').closest('.form-check').addClass('d-none');
-
-            showMessage('You cannot edit this note', 'alert-success');
+            // $('.master-note-title .edit, .add-new').addClass('d-none');
+            // $('#option1').closest('.form-check').addClass('d-none');
+            // $('#option2').closest('.form-check').addClass('d-none');
         }
 
         showLoader();
@@ -300,7 +299,7 @@ jQuery(document).ready(function ($) {
             var value = $(this).find('span').text();
             var $input = $('<input type="text" value="' + value + '" class="master-note-title-input">');
             $input.on('blur', function() {
-                $(this).parent('div').html('<h2 class="master-note-title d-flex"><span>' + $(this).val() + '</span><a class="edit ml-2" title="Edit" data-toggle="tooltip"><i class="material-icons">&#xE254;</i></a></h2>');
+                $(this).parent('div').html('<h2 class="master-note-title d-flex"><span>' + $(this).val() + '</span><a class="edit ml-2" title="' + window.i18n['en']['edit'] + '" data-toggle="tooltip"><i class="material-icons">&#xE254;</i></a></h2>');
             });
             $input.focus();
 
@@ -310,9 +309,9 @@ jQuery(document).ready(function ($) {
     });
 
     $(".add-new").on('click', function () {
-        var actions = '<a class="add" title="Add" data-toggle="tooltip"><i class="material-icons">&#xE03B;</i></a>' +
-            '<a class="edit" title="Edit" data-toggle="tooltip"><i class="material-icons">&#xE254;</i></a>' +
-            '<a class="delete" title="Delete" data-toggle="tooltip"><i class="material-icons">&#xE872;</i></a>';
+        var actions = '<a class="add" title="' + window.i18n['en']['add'] + '" data-toggle="tooltip"><i class="material-icons">&#xE03B;</i></a>' +
+            '<a class="edit" title="' + window.i18n['en']['edit'] + '" data-toggle="tooltip"><i class="material-icons">&#xE254;</i></a>' +
+            '<a class="delete" title="' + window.i18n['en']['delete'] + '" data-toggle="tooltip"><i class="material-icons">&#xE872;</i></a>';
 
         $(this).attr("disabled", "disabled");
         var index = $(".table-wrapper table tbody tr:last-child").index();

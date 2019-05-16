@@ -69,7 +69,7 @@ function showUrl(shortId) {
     );
 }
 
-async function addNoteToUser(noteShortId) {
+/* async function addNoteToUser(noteShortId) {
     return new Promise(function(resolve) {
         if (window.fb.auth.currentUser) {
             var db = window.fb.firestore;
@@ -97,7 +97,7 @@ async function addNoteToUser(noteShortId) {
             resolve(true);
         }
     });
-}
+} */
 
 var alphanums = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z'];
 function convertToAlphaNum(number) {
@@ -136,7 +136,7 @@ async function addShortId(noteId) {
             db.collection("MasterNotes").doc(noteId).update({shortId: currentId})
                 .then(async function() {
                     await increaseLastInsertId();
-                    await addNoteToUser(currentId);
+                    // await addNoteToUser(currentId);
                     showUrl(currentId);
                     resolve();
                 })
@@ -194,6 +194,12 @@ function saveNote() {
             });
         });
 
+        var userId = null;
+
+        if (localStorage.getItem('user_id')) {
+            userId = localStorage.getItem('user_id');
+        }
+
         var document = {
             name: escapeHtml(name),
             dateCreated: dateCreated,
@@ -202,7 +208,8 @@ function saveNote() {
             options: {
                 op1: $('#option1').is(':checked'),
                 op2: $('#option2').is(':checked')
-            }
+            },
+            userId: userId
         };
 
         var db = window.fb.firestore;
@@ -236,9 +243,20 @@ jQuery(document).ready(function ($) {
 
     window.fb.auth.onAuthStateChanged(async function (user) {
         if (user) {
+            await window.fb.firestore.collection("UserProfile").where('email', '==', window.fb.auth.currentUser.email).get()
+                .then(function(result) {
+                    if (result.docs.length === 1) {
+                        localStorage.setItem('user_id', result.docs[0].id);
+                    }
+                }).catch(function(error) {
+                    console.log(error);
+                });
+
             $('.nav').hide();
             $('.nav-login').show();
         } else {
+            localStorage.removeItem('user_id');
+
             $('.nav').show();
             $('.nav-login').hide();
         }

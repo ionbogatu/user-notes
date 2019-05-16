@@ -38,8 +38,7 @@ function createUserIfNotExist() {
         .then(async function (result) {
             if (result.docs.length === 0) {
                 await userProfileCollection.add({
-                    email: email,
-                    notes: []
+                    email: email
                 });
 
                 window.location.reload();

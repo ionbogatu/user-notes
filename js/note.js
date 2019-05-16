@@ -46,11 +46,7 @@ function reloadNotes() {
                         var hasAccess = false;
 
                         if (localStorage.getItem('user_id')) {
-                            var user = await window.fb.firestore.collection('UserProfile').doc(localStorage.getItem('user_id')).get();
-
-                            if (user) {
-                                hasAccess = user.data().notes.indexOf(noteShortId) > -1;
-                            }
+                            hasAccess = localStorage.getItem('user_id') === data.userId;
                         }
 
                         if (
@@ -277,6 +273,7 @@ jQuery(document).ready(function ($) {
             hideMessage();
         } else {
             localStorage.removeItem('user_id');
+
             $('.nav').show();
             $('.nav-login').hide();
             // $('.master-note-title .edit, .add-new').addClass('d-none');

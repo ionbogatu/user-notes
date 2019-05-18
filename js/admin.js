@@ -18,15 +18,19 @@ async function reloadNotes() {
     if (localStorage.getItem('user_id')) {
         var result = await db.collection("MasterNotes").where("userId", "==", localStorage.getItem('user_id')).get();
         if (result.docs.length > 0) {
-            var doc = result.docs[0];
+            for (const doc of result.docs) {
+                try {
+                    var actions = '<a class="edit" title="' + window.i18n['en']['edit'] + '" data-toggle="tooltip" targrt="_blank" href="' + getUrl(doc.data()['shortId']) + '"><i class="material-icons">&#xE254;</i></a>' +
+                    '<a class="delete" title="' + window.i18n['en']['delete'] + '" data-toggle="tooltip" data-id="' + doc.id + '" data-short-id="' + doc.data()['shortId'] + '"><i class="material-icons">&#xE872;</i></a>';
 
-            var actions = '<a class="edit" title="' + window.i18n['en']['edit'] + '" data-toggle="tooltip" targrt="_blank" href="' + getUrl(doc.data()['shortId']) + '"><i class="material-icons">&#xE254;</i></a>' +
-            '<a class="delete" title="' + window.i18n['en']['delete'] + '" data-toggle="tooltip" data-id="' + doc.id + '" data-short-id="' + doc.data()['shortId'] + '"><i class="material-icons">&#xE872;</i></a>';
+                    $('.table-wrapper .table tbody').append('<tr><td>' + doc.data()['name'] + '</td><td>' + showUrl(doc.data()['shortId']) + '</td><td>' + actions + '</td></tr>');
 
-            $('.table-wrapper .table tbody').append('<tr><td>' + doc.data()['name'] + '</td><td>' + showUrl(doc.data()['shortId']) + '</td><td>' + actions + '</td></tr>');
-
-            $('[data-toggle="tooltip"]').tooltip();
-            $('.table-wrapper').removeClass('d-none');
+                    $('[data-toggle="tooltip"]').tooltip();
+                    $('.table-wrapper').removeClass('d-none');
+                } catch (e) {
+                    console.log(e);
+                }
+            }
         } else {
             showMessage(window.i18n['en']['no-data-available'], 'alert-success');
             $('.table-wrapper').addClass('d-none');
